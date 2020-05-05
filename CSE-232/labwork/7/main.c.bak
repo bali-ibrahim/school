@@ -1,0 +1,15 @@
+#include <stdio.h>
+#include "oddEven.h"
+
+#define MulFive(x) ((5) * (x))
+
+int main(void)
+{
+    int arg;
+    scanf("%d", &arg);
+    int fiveTimes = MulFive(arg);
+    printf("%d\n", arg);
+    printMaxOfEvenNumbers(fiveTimes);
+    printMaxOfOddNumbers(fiveTimes);
+    return 0;
+}
