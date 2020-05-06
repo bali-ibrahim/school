@@ -19,7 +19,7 @@ newline_at_eof() {
 add_newline_if_missing() {
 
     if newline_at_eof $1; then
-        echo
+        :
     else
         printf "\n" >>$1
     fi
@@ -95,7 +95,7 @@ main() {
     compare_the_files_and_add_lines ${filenames[0]} ${filenames[1]}
 
     local odd_even_filename="odd_even.txt"
-    rm $odd_even_filename
+    > $odd_even_filename
 
     for f in ${filenames[@]}; do
         is_sum_odd_or_even $f $odd_even_filename
