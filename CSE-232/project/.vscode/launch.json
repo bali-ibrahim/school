@@ -13,6 +13,7 @@
             "externalConsole": true,
             "targetArchitecture": "x64",
             "preLaunchTask": "start-debug-container",
+            "postDebugTask": "stop-debug-container",
             "sourceFileMap": {
                 "/usr/src": "${workspaceFolder}"
             },

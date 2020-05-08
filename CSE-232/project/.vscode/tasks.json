@@ -2,7 +2,7 @@
     "version": "2.0.0",
     "tasks": [
         {
-            "label": "build (in container)",
+            "label": "build-in-container",
             "type": "shell",
             "command": "docker-compose up build-main && docker-compose rm -svf build-main",
             "group": {
@@ -42,6 +42,7 @@
             "label": "run the code",
             "type": "shell",
             "command": "docker-compose up run-main && docker-compose rm -svf run-main",
+            "dependsOn": "build-in-container",
             "group": "build",
             "problemMatcher": []
         },
@@ -49,6 +50,14 @@
             "label": "start-debug-container",
             "type": "shell",
             "command": "docker-compose up -d debug",
+            "group": "build",
+            "dependsOn": "build-in-container",
+            "problemMatcher": []
+        },
+        {
+            "label": "stop-debug-container",
+            "type": "shell",
+            "command": "docker-compose rm -svf debug",
             "group": "build",
             "problemMatcher": []
         }
