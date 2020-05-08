@@ -1,10 +1,25 @@
 version: "3.3"
 
 services:
-  build-main:
-    image: gcc
+  build-main: &buildmain
+    privileged: true
+    image: vsc_docker_cc_gdb
     volumes:
-      - ./:/usr/src/
+      - ${PWD}/:/usr/src/
     working_dir: /usr/src/
-
     command: ["make"]
+
+  build-clean:
+    <<: *buildmain
+    command: ["make clean"]
+
+  run-main:
+    <<: *buildmain
+    command: ["./main.exe"]
+
+  debug:
+    <<: *buildmain
+    container_name: debug
+    stdin_open: true
+    tty: true
+    command: []
