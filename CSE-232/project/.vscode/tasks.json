@@ -4,7 +4,7 @@
         {
             "label": "build (in container)",
             "type": "shell",
-            "command": "docker-compose up build-main",
+            "command": "docker-compose up build-main && docker-compose rm -svf build-main",
             "group": {
                 "kind": "build",
                 "isDefault": true
@@ -35,27 +35,20 @@
         {
             "label": "remove containers",
             "type": "shell",
-            "command": "docker ps -a -q | % { docker rm $_ }",
+            "command": "docker-compose down",
             "problemMatcher": []
         },
         {
             "label": "run the code",
             "type": "shell",
-            "command": "docker-compose up run-main",
+            "command": "docker-compose up run-main && docker-compose rm -svf run-main",
             "group": "build",
             "problemMatcher": []
         },
         {
-            "label": "prepare to debug",
+            "label": "start-debug-container",
             "type": "shell",
-            "command": "docker-compose up debug",
-            "group": "build",
-            "problemMatcher": []
-        },
-        {
-            "label": "echo workingdir",
-            "type": "shell",
-            "command": "ls '${workspaceFolder}'",
+            "command": "docker-compose up -d debug",
             "group": "build",
             "problemMatcher": []
         }
