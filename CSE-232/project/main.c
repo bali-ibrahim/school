@@ -97,7 +97,7 @@ void save(char *filename)
         if (textbuffer[i].next == DEFAULT_NODE_INT)
             continue;
         // add empty lines
-        for (int i = 0; i < (textbuffer[textbuffer[i].next].statno - textbuffer[i].statno); ++i)
+        for (int j = 0; j < (textbuffer[textbuffer[i].next].statno - textbuffer[i].statno - 1); ++j)
         {
             fputs(DEFAULT_NEW_LINE, fp);
         }
@@ -131,18 +131,59 @@ void delete (int statno)
     }
 }
 
+int _first_empty_index()
+{
+    for (int i = 0; i < MAX_LINES; ++i)
+    {
+        if (textbuffer[i].statno == DEFAULT_NODE_INT)
+            return i;
+    }
+
+    return DEFAULT_NODE_INT;
+}
+
 void insert(int statno, char *stat)
 {
+    // TODO: verify that adding newline is required or not
+    // ASSUMPTION: a line is defined as characters ending with DEFAULT_NEW_LINE
+    char statement[MAX_CHAR_PER_LINE];
+    strncpy(statement, stat, MAX_CHAR_PER_LINE);
+    strcat(statement, DEFAULT_NEW_LINE);
+
+    // TODO: test for if the buffer is full
+    int new_index = _first_empty_index();
+    // buffer is full
+    if (new_index == DEFAULT_NODE_INT)
+        return;
+
+    // TODO: refuse statno <1
+
+    // TODO: centralize node creation
+    struct node line = DEFAULT_NODE;
+    strncpy(line.statement, statement, MAX_CHAR_PER_LINE);
+    line.statno = statno;
+    textbuffer[new_index] = line;
+
+    if (statno < textbuffer[head].statno)
+    {
+
+        textbuffer[new_index].next = head;
+        head = new_index;
+        return;
+    }
+
     for (int i = head;
          i != DEFAULT_NODE_INT;
          i = textbuffer[i].next)
     {
         struct node *current_line = &textbuffer[i];
         struct node *next_line = &textbuffer[current_line->next];
-        if (next_line->statno == statno)
+
+        if (current_line->next == DEFAULT_NODE_INT || statno < next_line->statno)
         {
-            current_line->next = next_line->next;
-            *next_line = DEFAULT_NODE;
+            textbuffer[new_index].next = current_line->next;
+            current_line->next = new_index;
+            return;
         }
     }
 }
@@ -153,8 +194,14 @@ int main(int argc, char const *argv[])
     {
         initialize_textbuffer();
         edit("new.txt");
-        // TODO: doesn't work
         delete (1);
+        save("saved.txt");
+        insert(2, "This is the new 2nd line.");
+        save("saved.txt");
+        // insert(1, "This is the new 1st line.");
+        insert(5, "This is the new 5th line.");
+        save("saved.txt");
+        insert(4, "This is the new 4th line.");
         save("saved.txt");
     }
     return 0;
