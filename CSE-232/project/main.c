@@ -33,6 +33,23 @@ void initialize_textbuffer(void)
     }
 }
 
+int _is_empty(int idx)
+{
+    return textbuffer[idx].statno == DEFAULT_NODE_INT;
+}
+
+int _first_empty_index()
+{
+    for (int i = 0; i < MAX_LINES; ++i)
+    {
+        // TODO: centralize empty check
+        if (_is_empty(i))
+            return i;
+    }
+
+    return DEFAULT_NODE_INT;
+}
+
 void edit(char *filename)
 {
     char ch;
@@ -67,6 +84,33 @@ void edit(char *filename)
     fclose(fp);
 }
 
+void print(char *filename)
+{
+    puts(filename);
+
+    FILE *fp;
+
+    fp = fopen(filename, "r");
+
+    if (fp == NULL)
+    {
+        perror("Error while opening the file.\n");
+        exit(EXIT_FAILURE);
+    }
+
+    for (int i = head;
+         i != DEFAULT_NODE_INT;
+         i = textbuffer[i].next)
+    {
+        if (_is_empty(i))
+            continue;
+        char *statement;
+        printf("%d ", textbuffer[i].statno);
+        printf(textbuffer[i].statement);
+    }
+    puts("");
+}
+
 void save(char *filename)
 {
     FILE *fp;
@@ -89,7 +133,7 @@ void save(char *filename)
          i != DEFAULT_NODE_INT;
          i = textbuffer[i].next)
     {
-        if (textbuffer[i].statement == NULL)
+        if (_is_empty(i))
             continue;
         fputs(textbuffer[i].statement, fp);
 
@@ -129,17 +173,6 @@ void delete (int statno)
             *next_line = DEFAULT_NODE;
         }
     }
-}
-
-int _first_empty_index()
-{
-    for (int i = 0; i < MAX_LINES; ++i)
-    {
-        if (textbuffer[i].statno == DEFAULT_NODE_INT)
-            return i;
-    }
-
-    return DEFAULT_NODE_INT;
 }
 
 void insert(int statno, char *stat)
@@ -203,6 +236,8 @@ int main(int argc, char const *argv[])
         save("saved.txt");
         insert(4, "This is the new 4th line.");
         save("saved.txt");
+        print("new.txt");
+        print("saved.txt");
     }
     return 0;
 }
