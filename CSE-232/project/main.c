@@ -4,8 +4,12 @@
 
 #define MAX_CHAR_PER_LINE 40
 #define MAX_LINES 30
+#define MAX_CHANGES 20
 #define DEFAULT_NODE_INT -1
 #define DEFAULT_NEW_LINE "\r\n"
+#define DFS_INSERT 1
+#define DFS_DELETE 2
+#define DFS_OTHERWISE 0
 struct node
 {
     int statno;                        // statement number
@@ -13,15 +17,22 @@ struct node
     // TODO: why next is an int as opposed to a node?
     int next; // points to the textbuffer[] index of the next statement
 };
-
-struct node textbuffer[MAX_LINES]; // max. 30 lines
-
 const struct node DEFAULT_NODE = {
     .statno = DEFAULT_NODE_INT,
     .statement = 0,
     .next = DEFAULT_NODE_INT};
+struct dfs
+{
+    int code; // 1-insertion 2-deletion 0-otherwise
+    int statno;
+    char statement[MAX_CHAR_PER_LINE]; // only for insertion
+};
 
-int head = DEFAULT_NODE_INT; // points to the first valid statement in textbuffer[]
+struct node textbuffer[MAX_LINES]; // max. 30 lines
+int head = DEFAULT_NODE_INT;       // points to the first valid statement in textbuffer[]
+struct dfs diffs[MAX_CHANGES];     // max. 20 changes
+int version;                       // version number
+char *filename;
 
 void initialize_textbuffer(void)
 {
@@ -42,7 +53,6 @@ int _first_empty_index()
 {
     for (int i = 0; i < MAX_LINES; ++i)
     {
-        // TODO: centralize empty check
         if (_is_empty(i))
             return i;
     }
@@ -50,7 +60,32 @@ int _first_empty_index()
     return DEFAULT_NODE_INT;
 }
 
-void edit(char *filename)
+int _dfs_is_empty(int idx)
+{
+    return diffs[idx].statno == DEFAULT_NODE_INT;
+}
+int _dfs_first_empty_index()
+{
+    for (int i = 0; i < MAX_CHANGES; ++i)
+    {
+        if (_dfs_is_empty(i))
+            return i;
+    }
+
+    return DEFAULT_NODE_INT;
+}
+
+void dfs_insert(int statno, char *stat)
+{
+    struct dfs df =
+        {
+            .code = DFS_INSERT,
+            .statno = statno,
+        };
+    strcpy(df.statement, stat);
+}
+
+void edit()
 {
     char ch;
     FILE *fp;
@@ -84,20 +119,9 @@ void edit(char *filename)
     fclose(fp);
 }
 
-void print(char *filename)
+void print()
 {
     puts(filename);
-
-    FILE *fp;
-
-    fp = fopen(filename, "r");
-
-    if (fp == NULL)
-    {
-        perror("Error while opening the file.\n");
-        exit(EXIT_FAILURE);
-    }
-
     for (int i = head;
          i != DEFAULT_NODE_INT;
          i = textbuffer[i].next)
@@ -111,7 +135,7 @@ void print(char *filename)
     puts("");
 }
 
-void save(char *filename)
+void save()
 {
     FILE *fp;
 
@@ -202,6 +226,7 @@ void insert(int statno, char *stat)
 
         textbuffer[new_index].next = head;
         head = new_index;
+        dfs_insert(statno, stat);
         return;
     }
 
@@ -216,6 +241,7 @@ void insert(int statno, char *stat)
         {
             textbuffer[new_index].next = current_line->next;
             current_line->next = new_index;
+            dfs_insert(statno, stat);
             return;
         }
     }
@@ -223,21 +249,22 @@ void insert(int statno, char *stat)
 
 int main(int argc, char const *argv[])
 {
-    for (int i = 0; i < 20; i++)
-    {
-        initialize_textbuffer();
-        edit("new.txt");
-        delete (1);
-        save("saved.txt");
-        insert(2, "This is the new 2nd line.");
-        save("saved.txt");
-        // insert(1, "This is the new 1st line.");
-        insert(5, "This is the new 5th line.");
-        save("saved.txt");
-        insert(4, "This is the new 4th line.");
-        save("saved.txt");
-        print("new.txt");
-        print("saved.txt");
-    }
+    filename = "new.txt";
+    // for (int i = 0; i < 20; i++)
+    // {
+    initialize_textbuffer();
+    edit();
+    // save(myfile);
+    delete (1);
+    save();
+    insert(2, "This is the new 2nd line.");
+    save();
+    // insert(1, "This is the new 1st line.");
+    insert(5, "This is the new 5th line.");
+    save();
+    insert(4, "This is the new 4th line.");
+    save();
+    print();
+    // }
     return 0;
 }
