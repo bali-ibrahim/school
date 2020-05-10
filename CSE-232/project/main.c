@@ -11,6 +11,19 @@
 #define DFS_DELETE 2
 #define DFS_OTHERWISE 0
 #define DEFAULT_DFS_SAVE_END -1
+#define DEFAULT_REVISION 0
+struct dfs_format
+{
+    char *scanf;
+    char *printf;
+};
+const struct dfs_format DFS_FORMAT = {
+    // https://stackoverflow.com/a/2854510/7032856
+    // these should be identical(ish)
+    .scanf = "%d %d %[^\n\r]",
+    .printf = "%d %d %s",
+};
+
 struct node
 {
     int statno;                        // statement number
@@ -113,7 +126,16 @@ void dfs_delete(int statno)
 void dfs_save()
 {
     FILE *fp;
-    fp = fopen(dif_filename, "a");
+    // first version
+    if (version == DEFAULT_REVISION)
+    {
+        fp = fopen(dif_filename, "w");
+    }
+    else
+    {
+
+        fp = fopen(dif_filename, "a");
+    }
 
     if (fp == NULL)
     {
@@ -126,7 +148,10 @@ void dfs_save()
          i < MAX_CHANGES && diffs[i].statno != DEFAULT_NODE_INT;
          ++i)
     {
-        fprintf(fp, "%d %d %s%s", diffs[i].code, diffs[i].statno, diffs[i].statement, DEFAULT_NEW_LINE);
+        char *format = strdup(DFS_FORMAT.printf);
+        strcat(format, "%s");
+        fprintf(fp, format, diffs[i].code, diffs[i].statno, diffs[i].statement, DEFAULT_NEW_LINE);
+        free(format);
     }
 
     fprintf(fp, "%d%s", DEFAULT_DFS_SAVE_END, DEFAULT_NEW_LINE);
@@ -151,63 +176,57 @@ void dfs_reset_version()
     fclose(fp);
 }
 
-void commit()
+void dfs_read()
 {
-    save_File();
-    dfs_reset_version();
-}
 
-void edit()
-{
-    char ch;
     FILE *fp;
-
-    fp = fopen(filename, "r"); // read mode
+    fp = fopen(dif_filename, "r");
 
     if (fp == NULL)
     {
-        perror("Error while opening the file.\n");
-        exit(EXIT_FAILURE);
+        _diffs_flush();
+        dfs_reset_version();
+        return;
     }
 
-    int line_no = 0;
-    int i = 0;
-    char line_buffer[MAX_CHAR_PER_LINE];
+    // TODO: calculate better line length or make it dynamic
+    char line_buffer[MAX_CHAR_PER_LINE * 3];
     while (fgets(line_buffer, MAX_CHAR_PER_LINE, fp) != NULL)
     {
-        ++line_no;
-        // skip empty line
-        if (!(strcmp(line_buffer, "\n") && strcmp(line_buffer, "\r") && strcmp(line_buffer, "\n\r") && strcmp(line_buffer, "\r\n")))
-            continue;
-        struct node line = DEFAULT_NODE;
-        line.statno = line_no;
-        strcpy(line.statement, line_buffer);
-        if (i > 0)
-            textbuffer[i - 1].next = i;
-        textbuffer[i] = line;
-        ++i;
+        // char *version;
+        // snprintf(version, 1, "%d", DEFAULT_REVISION);
+        // if (!strcmp(line_buffer, version))
+        // {
+        //     free(version);
+        //     _diffs_flush();
+        //     return;
+        // }
+
+        int _version;
+        sscanf(line_buffer, "%d", &_version);
+        if (_version == DEFAULT_REVISION)
+        {
+            _diffs_flush();
+            return;
+        }
+
+        while (fgets(line_buffer, MAX_CHAR_PER_LINE, fp) != NULL)
+        {
+            // revision end
+            int code;
+            sscanf(line_buffer, "%d", &code);
+            if (code == DEFAULT_DFS_SAVE_END)
+                break;
+            struct dfs df = DEFAULT_DFS;
+            sscanf(line_buffer, DFS_FORMAT.scanf, &df.code, &df.statno, df.statement);
+            diffs[_dfs_first_empty_index()] = df;
+        }
     }
-    head = 0;
+
     fclose(fp);
 }
 
-void print()
-{
-    puts(filename);
-    for (int i = head;
-         i != DEFAULT_NODE_INT;
-         i = textbuffer[i].next)
-    {
-        if (_is_empty(i))
-            continue;
-        char *statement;
-        printf("%d ", textbuffer[i].statno);
-        printf(textbuffer[i].statement);
-    }
-    puts("");
-}
-
-void save_file()
+void _save_file()
 {
     FILE *fp;
 
@@ -244,6 +263,69 @@ void save_file()
     }
 
     fclose(fp);
+}
+
+void commit()
+{
+    _save_file();
+    dfs_reset_version();
+}
+
+void _read_file()
+{
+    char ch;
+    FILE *fp;
+
+    fp = fopen(filename, "r"); // read mode
+
+    if (fp == NULL)
+    {
+        perror("Error while opening the file.\n");
+        exit(EXIT_FAILURE);
+    }
+
+    initialize_textbuffer();
+    int line_no = 0;
+    int i = 0;
+    char line_buffer[MAX_CHAR_PER_LINE];
+    while (fgets(line_buffer, MAX_CHAR_PER_LINE, fp) != NULL)
+    {
+        ++line_no;
+        // skip empty line
+        if (!(strcmp(line_buffer, "\n") && strcmp(line_buffer, "\r") && strcmp(line_buffer, "\n\r") && strcmp(line_buffer, "\r\n")))
+            continue;
+        struct node line = DEFAULT_NODE;
+        line.statno = line_no;
+        strcpy(line.statement, line_buffer);
+        if (i > 0)
+            textbuffer[i - 1].next = i;
+        textbuffer[i] = line;
+        ++i;
+    }
+    head = 0;
+    fclose(fp);
+}
+
+void edit()
+{
+    _read_file();
+    dfs_read();
+}
+
+void print()
+{
+    puts(filename);
+    for (int i = head;
+         i != DEFAULT_NODE_INT;
+         i = textbuffer[i].next)
+    {
+        if (_is_empty(i))
+            continue;
+        char *statement;
+        printf("%d ", textbuffer[i].statno);
+        printf(textbuffer[i].statement);
+    }
+    puts("");
 }
 
 void save()
@@ -326,6 +408,57 @@ void insert(int statno, char *stat)
     }
 }
 
+void interpreter_loop()
+{
+    // TODO: untested
+    char command;
+    char *argument;
+
+    while (command != 'X')
+    {
+        scanf("%c %s", &command, argument);
+        if (!(filename || command == 'E'))
+        {
+            printf("Please select a file to edit buy entering 'E filename'.");
+            continue;
+        }
+        //
+        switch (command)
+        {
+        case 'E':
+            free(filename);
+            filename = strdup(argument);
+            free(dif_filename);
+            dif_filename = strdup(filename);
+            strcat(dif_filename, ".dif");
+            edit();
+            break;
+        case 'I':
+            int statno;
+            char *statement;
+            // TODO: centralize 'except for line end' strings?
+            scanf("%d %[^\n\r]", &statno, statement);
+            insert(statno, statement);
+            break;
+        case 'D':
+            int statno;
+            scanf("%d", &statno);
+            break;
+        case 'P':
+            print();
+            break;
+        case 'S':
+            save();
+            break;
+        case 'C':
+            commit();
+            break;
+        default:
+            break;
+        }
+    }
+}
+
 int main(int argc, char const *argv[])
 {
     filename = "new.txt";
@@ -334,8 +467,8 @@ int main(int argc, char const *argv[])
     strcat(dif_filename, ".dif");
     // for (int i = 0; i < 20; i++)
     // {
-    initialize_textbuffer();
-    _diffs_flush();
+    // _diffs_flush();
+    // dfs_read();
     edit();
     // save(myfile);
     delete (1);
