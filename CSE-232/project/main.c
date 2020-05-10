@@ -10,6 +10,7 @@
 #define DFS_INSERT 1
 #define DFS_DELETE 2
 #define DFS_OTHERWISE 0
+#define DEFAULT_DFS_SAVE_END -1
 struct node
 {
     int statno;                        // statement number
@@ -28,11 +29,18 @@ struct dfs
     char statement[MAX_CHAR_PER_LINE]; // only for insertion
 };
 
+const struct dfs DEFAULT_DFS = {
+    .code = DEFAULT_NODE_INT,
+    .statno = DEFAULT_NODE_INT,
+    .statement = 0,
+};
+
 struct node textbuffer[MAX_LINES]; // max. 30 lines
 int head = DEFAULT_NODE_INT;       // points to the first valid statement in textbuffer[]
 struct dfs diffs[MAX_CHANGES];     // max. 20 changes
-int version;                       // version number
+int version = 0;                   // version number
 char *filename;
+char *dif_filename;
 
 void initialize_textbuffer(void)
 {
@@ -44,11 +52,20 @@ void initialize_textbuffer(void)
     }
 }
 
+void _diffs_flush(void)
+{
+
+    // initialize buffer
+    for (int i = 0; i < MAX_CHANGES; ++i)
+    {
+        diffs[i] = DEFAULT_DFS;
+    }
+}
+
 int _is_empty(int idx)
 {
     return textbuffer[idx].statno == DEFAULT_NODE_INT;
 }
-
 int _first_empty_index()
 {
     for (int i = 0; i < MAX_LINES; ++i)
@@ -59,7 +76,6 @@ int _first_empty_index()
 
     return DEFAULT_NODE_INT;
 }
-
 int _dfs_is_empty(int idx)
 {
     return diffs[idx].statno == DEFAULT_NODE_INT;
@@ -77,12 +93,68 @@ int _dfs_first_empty_index()
 
 void dfs_insert(int statno, char *stat)
 {
-    struct dfs df =
-        {
-            .code = DFS_INSERT,
-            .statno = statno,
-        };
+    struct dfs df = {
+        .code = DFS_INSERT,
+        .statno = statno,
+    };
     strcpy(df.statement, stat);
+    diffs[_dfs_first_empty_index()] = df;
+}
+
+void dfs_delete(int statno)
+{
+    struct dfs df = {
+        .code = DFS_DELETE,
+        .statno = statno,
+    };
+    diffs[_dfs_first_empty_index()] = df;
+}
+
+void dfs_save()
+{
+    FILE *fp;
+    fp = fopen(dif_filename, "a");
+
+    if (fp == NULL)
+    {
+        perror("Error while opening the file.\n");
+        exit(EXIT_FAILURE);
+    }
+
+    fprintf(fp, "%d%s", ++version, DEFAULT_NEW_LINE);
+    for (int i = 0;
+         i < MAX_CHANGES && diffs[i].statno != DEFAULT_NODE_INT;
+         ++i)
+    {
+        fprintf(fp, "%d %d %s%s", diffs[i].code, diffs[i].statno, diffs[i].statement, DEFAULT_NEW_LINE);
+    }
+
+    fprintf(fp, "%d%s", DEFAULT_DFS_SAVE_END, DEFAULT_NEW_LINE);
+    _diffs_flush();
+    fclose(fp);
+}
+
+void dfs_reset_version()
+{
+
+    version = 0;
+    FILE *fp;
+    fp = fopen(dif_filename, "w");
+
+    if (fp == NULL)
+    {
+        perror("Error while opening the file.\n");
+        exit(EXIT_FAILURE);
+    }
+
+    fprintf(fp, "%d%s", version, DEFAULT_NEW_LINE);
+    fclose(fp);
+}
+
+void commit()
+{
+    save_File();
+    dfs_reset_version();
 }
 
 void edit()
@@ -109,7 +181,7 @@ void edit()
             continue;
         struct node line = DEFAULT_NODE;
         line.statno = line_no;
-        strncpy(line.statement, line_buffer, MAX_CHAR_PER_LINE);
+        strcpy(line.statement, line_buffer);
         if (i > 0)
             textbuffer[i - 1].next = i;
         textbuffer[i] = line;
@@ -135,7 +207,7 @@ void print()
     puts("");
 }
 
-void save()
+void save_file()
 {
     FILE *fp;
 
@@ -174,6 +246,11 @@ void save()
     fclose(fp);
 }
 
+void save()
+{
+    dfs_save();
+}
+
 void delete (int statno)
 {
     if (textbuffer[head].statno == statno)
@@ -181,6 +258,7 @@ void delete (int statno)
         int new_head = textbuffer[head].next;
         textbuffer[head] = DEFAULT_NODE;
         head = new_head;
+        dfs_delete(statno);
         return;
     }
 
@@ -195,6 +273,8 @@ void delete (int statno)
         {
             current_line->next = next_line->next;
             *next_line = DEFAULT_NODE;
+            dfs_delete(statno);
+            return;
         }
     }
 }
@@ -204,20 +284,19 @@ void insert(int statno, char *stat)
     // TODO: verify that adding newline is required or not
     // ASSUMPTION: a line is defined as characters ending with DEFAULT_NEW_LINE
     char statement[MAX_CHAR_PER_LINE];
-    strncpy(statement, stat, MAX_CHAR_PER_LINE);
+    strcpy(statement, stat);
     strcat(statement, DEFAULT_NEW_LINE);
 
-    // TODO: test for if the buffer is full
     int new_index = _first_empty_index();
     // buffer is full
     if (new_index == DEFAULT_NODE_INT)
         return;
 
-    // TODO: refuse statno <1
+    // TODO: refuse statno <1 ?
 
     // TODO: centralize node creation
     struct node line = DEFAULT_NODE;
-    strncpy(line.statement, statement, MAX_CHAR_PER_LINE);
+    strcpy(line.statement, statement);
     line.statno = statno;
     textbuffer[new_index] = line;
 
@@ -250,9 +329,13 @@ void insert(int statno, char *stat)
 int main(int argc, char const *argv[])
 {
     filename = "new.txt";
+    dif_filename = strdup(filename);
+    // strcpy(dif_filename, filename);
+    strcat(dif_filename, ".dif");
     // for (int i = 0; i < 20; i++)
     // {
     initialize_textbuffer();
+    _diffs_flush();
     edit();
     // save(myfile);
     delete (1);
@@ -266,5 +349,7 @@ int main(int argc, char const *argv[])
     save();
     print();
     // }
+
+    free(dif_filename);
     return 0;
 }
