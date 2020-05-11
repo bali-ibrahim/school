@@ -236,8 +236,6 @@ void dfs_save()
 
     char *tmp_file = strdup(dif_filename);
     tmp_file = strcat(tmp_file, "~");
-    // tmp_file = "~";
-    // strcat(tmp_file, dif_filename);
     FILE *t_fp;
 
     t_fp = fopen(tmp_file, "w");
