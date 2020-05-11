@@ -11,3 +11,9 @@
 - What if an earlier revision of the file is modified and then saved? Overwrite later revisions?
 
 - Can filename be global?
+
+- If a diff is saved, then it's impossible to go back to revision 0. Is there a test script that will be used?
+
+- Are the datatypes given in the description a requirement or recommendation?
+
+- Is it OK to have other datatypes in global?

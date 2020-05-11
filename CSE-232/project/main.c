@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <unistd.h>
 
 #define MAX_CHAR_PER_LINE 40
 #define MAX_LINES 30
@@ -12,6 +13,8 @@
 #define DFS_OTHERWISE 0
 #define DEFAULT_DFS_SAVE_END -1
 #define DEFAULT_REVISION 0
+#define LATEST_REVISION MAX_CHANGES
+#define DIFF_LINE_MAX_LENGTH (3 * MAX_CHAR_PER_LINE)
 struct dfs_format
 {
     char *scanf;
@@ -87,7 +90,7 @@ int _first_empty_index()
             return i;
     }
 
-    return DEFAULT_NODE_INT;
+    return MAX_LINES;
 }
 int _dfs_is_empty(int idx)
 {
@@ -101,7 +104,12 @@ int _dfs_first_empty_index()
             return i;
     }
 
-    return DEFAULT_NODE_INT;
+    return MAX_CHANGES;
+}
+
+int _file_exists(char *fname)
+{
+    return (access(fname, F_OK) != -1);
 }
 
 void dfs_insert(int statno, char *stat)
@@ -123,45 +131,8 @@ void dfs_delete(int statno)
     diffs[_dfs_first_empty_index()] = df;
 }
 
-void dfs_save()
-{
-    FILE *fp;
-    // first version
-    if (version == DEFAULT_REVISION)
-    {
-        fp = fopen(dif_filename, "w");
-    }
-    else
-    {
-
-        fp = fopen(dif_filename, "a");
-    }
-
-    if (fp == NULL)
-    {
-        perror("Error while opening the file.\n");
-        exit(EXIT_FAILURE);
-    }
-
-    fprintf(fp, "%d%s", ++version, DEFAULT_NEW_LINE);
-    for (int i = 0;
-         i < MAX_CHANGES && diffs[i].statno != DEFAULT_NODE_INT;
-         ++i)
-    {
-        char *format = strdup(DFS_FORMAT.printf);
-        strcat(format, "%s");
-        fprintf(fp, format, diffs[i].code, diffs[i].statno, diffs[i].statement, DEFAULT_NEW_LINE);
-        free(format);
-    }
-
-    fprintf(fp, "%d%s", DEFAULT_DFS_SAVE_END, DEFAULT_NEW_LINE);
-    _diffs_flush();
-    fclose(fp);
-}
-
 void dfs_reset_version()
 {
-
     version = 0;
     FILE *fp;
     fp = fopen(dif_filename, "w");
@@ -176,41 +147,144 @@ void dfs_reset_version()
     fclose(fp);
 }
 
+int dfs_file_max_version()
+{
+    int _version;
+    FILE *fp;
+    if (_file_exists(dif_filename))
+    {
+        fp = fopen(dif_filename, "r");
+        char line_buffer[DIFF_LINE_MAX_LENGTH];
+        while (fgets(line_buffer, DIFF_LINE_MAX_LENGTH, fp) != NULL)
+        {
+            sscanf(line_buffer, "%d", &_version);
+            while (fgets(line_buffer, DIFF_LINE_MAX_LENGTH, fp) != NULL)
+            {
+                // revision end
+                int code;
+                sscanf(line_buffer, "%d", &code);
+                if (code == DEFAULT_DFS_SAVE_END)
+                    break;
+            }
+        }
+        fclose(fp);
+    }
+    else
+    {
+        dfs_reset_version();
+        _version = version;
+    }
+    return _version;
+}
+
+void dfs_save()
+{
+
+    FILE *fp;
+    unsigned int line_no = 0;
+    if (_file_exists(dif_filename) && dfs_file_max_version() != DEFAULT_REVISION)
+    {
+        fp = fopen(dif_filename, "r+");
+
+        // find where the current revision ends
+        char line_buffer[DIFF_LINE_MAX_LENGTH];
+        int _version;
+        while (fgets(line_buffer, DIFF_LINE_MAX_LENGTH, fp) != NULL)
+        {
+            ++line_no;
+            sscanf(line_buffer, "%d", &_version);
+            while (fgets(line_buffer, DIFF_LINE_MAX_LENGTH, fp) != NULL)
+            {
+                ++line_no;
+                // revision end
+                int code;
+                sscanf(line_buffer, "%d", &code);
+                if (code == DEFAULT_DFS_SAVE_END)
+                    break;
+            }
+            if (_version == version)
+                break;
+        }
+    }
+    else
+    {
+        fp = fopen(dif_filename, "w");
+    }
+
+    if (fp == NULL)
+    {
+        perror("Error while opening the file.\n");
+        exit(EXIT_FAILURE);
+    }
+
+    fprintf(fp, "%d%s", ++version, DEFAULT_NEW_LINE);
+    for (int i = 0;
+         i < MAX_CHANGES && diffs[i].statno != DEFAULT_NODE_INT;
+         ++i)
+    {
+        fprintf(fp, DFS_FORMAT.printf, diffs[i].code, diffs[i].statno, diffs[i].statement);
+        fprintf(fp, DEFAULT_NEW_LINE);
+        ++line_no;
+    }
+
+    fprintf(fp, "%d%s", DEFAULT_DFS_SAVE_END, DEFAULT_NEW_LINE);
+    ++line_no;
+    _diffs_flush();
+    fclose(fp);
+
+    // remove rest of the file
+
+    char *tmp_file = strdup(dif_filename);
+    tmp_file = strcat(tmp_file, "~");
+    // tmp_file = "~";
+    // strcat(tmp_file, dif_filename);
+    FILE *t_fp;
+
+    t_fp = fopen(tmp_file, "w");
+    fp = fopen(dif_filename, "r");
+
+    char line_buffer[DIFF_LINE_MAX_LENGTH];
+    for (unsigned int i = 0; i <= line_no && fgets(line_buffer, DIFF_LINE_MAX_LENGTH, fp) != NULL; ++i)
+    {
+        fprintf(t_fp, line_buffer);
+        // fprintf(t_fp, DEFAULT_NEW_LINE);
+    }
+    fclose(fp);
+    fclose(t_fp);
+
+    // possible you have to remove old file here before
+    if (!rename(tmp_file, dif_filename))
+    {
+        printf("Rename Error");
+    }
+    free(tmp_file);
+}
+
 void dfs_read()
 {
 
+    _diffs_flush();
     FILE *fp;
     fp = fopen(dif_filename, "r");
 
     if (fp == NULL)
     {
-        _diffs_flush();
         dfs_reset_version();
         return;
     }
 
     // TODO: calculate better line length or make it dynamic
-    char line_buffer[MAX_CHAR_PER_LINE * 3];
-    while (fgets(line_buffer, MAX_CHAR_PER_LINE, fp) != NULL)
+    char line_buffer[DIFF_LINE_MAX_LENGTH];
+    while (fgets(line_buffer, DIFF_LINE_MAX_LENGTH, fp) != NULL)
     {
-        // char *version;
-        // snprintf(version, 1, "%d", DEFAULT_REVISION);
-        // if (!strcmp(line_buffer, version))
-        // {
-        //     free(version);
-        //     _diffs_flush();
-        //     return;
-        // }
 
         int _version;
         sscanf(line_buffer, "%d", &_version);
-        if (_version == DEFAULT_REVISION)
-        {
-            _diffs_flush();
+        // read just until the desired version
+        if (_version > version || _version == DEFAULT_REVISION)
             return;
-        }
 
-        while (fgets(line_buffer, MAX_CHAR_PER_LINE, fp) != NULL)
+        while (fgets(line_buffer, DIFF_LINE_MAX_LENGTH, fp) != NULL)
         {
             // revision end
             int code;
@@ -265,15 +339,8 @@ void _save_file()
     fclose(fp);
 }
 
-void commit()
-{
-    _save_file();
-    dfs_reset_version();
-}
-
 void _read_file()
 {
-    char ch;
     FILE *fp;
 
     fp = fopen(filename, "r"); // read mode
@@ -408,21 +475,52 @@ void insert(int statno, char *stat)
     }
 }
 
+void dfs_apply()
+{
+    for (int i = 0; i < MAX_CHANGES; ++i)
+    {
+        switch (diffs[i].code)
+        {
+        case DFS_INSERT:
+            insert(diffs[i].statno, diffs[i].statement);
+            break;
+        case DFS_DELETE:
+            delete (diffs[i].statno);
+            break;
+        default:
+            break;
+        }
+        diffs[i] = DEFAULT_DFS;
+    }
+}
+
+void commit()
+{
+    _read_file();
+    dfs_read();
+    dfs_apply();
+    _save_file();
+    dfs_reset_version();
+}
+
 void interpreter_loop()
 {
     // TODO: untested
     char command;
     char *argument;
+    int argument2 = LATEST_REVISION;
 
     while (command != 'X')
     {
-        scanf("%c %s", &command, argument);
+        scanf("%c %s %d", &command, argument, &argument2);
         if (!(filename || command == 'E'))
         {
             printf("Please select a file to edit buy entering 'E filename'.");
             continue;
         }
         //
+        int statno;
+        char *statement;
         switch (command)
         {
         case 'E':
@@ -431,17 +529,15 @@ void interpreter_loop()
             free(dif_filename);
             dif_filename = strdup(filename);
             strcat(dif_filename, ".dif");
+            version = argument2;
             edit();
             break;
         case 'I':
-            int statno;
-            char *statement;
             // TODO: centralize 'except for line end' strings?
             scanf("%d %[^\n\r]", &statno, statement);
             insert(statno, statement);
             break;
         case 'D':
-            int statno;
             scanf("%d", &statno);
             break;
         case 'P':
@@ -465,23 +561,20 @@ int main(int argc, char const *argv[])
     dif_filename = strdup(filename);
     // strcpy(dif_filename, filename);
     strcat(dif_filename, ".dif");
-    // for (int i = 0; i < 20; i++)
-    // {
-    // _diffs_flush();
-    // dfs_read();
+
     edit();
-    // save(myfile);
-    delete (1);
-    save();
-    insert(2, "This is the new 2nd line.");
-    save();
-    // insert(1, "This is the new 1st line.");
+    version = 2;
+    // commit();
+    // edit();
+    // delete (1);
+    // save();
+    // insert(2, "This is the new 2nd line.");
+    // save();
+    // // insert(1, "This is the new 1st line.");
+    insert(4, "This is the new 4th line.");
     insert(5, "This is the new 5th line.");
     save();
-    insert(4, "This is the new 4th line.");
-    save();
-    print();
-    // }
+    // print();
 
     free(dif_filename);
     return 0;
