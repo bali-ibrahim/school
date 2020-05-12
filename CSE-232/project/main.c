@@ -85,6 +85,7 @@ int _is_empty(int idx)
 {
     return textbuffer[idx].statno == DEFAULT_NODE_INT;
 }
+
 int _first_empty_index()
 {
     for (int i = 0; i < MAX_LINES; ++i)
@@ -95,10 +96,12 @@ int _first_empty_index()
 
     return MAX_LINES;
 }
+
 int _dfs_is_empty(int idx)
 {
     return diffs[idx].statno == DEFAULT_NODE_INT;
 }
+
 int _dfs_first_empty_index()
 {
     for (int i = 0; i < MAX_CHANGES; ++i)
