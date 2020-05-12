@@ -15,6 +15,9 @@
 #define DEFAULT_REVISION 0
 #define LATEST_REVISION MAX_CHANGES
 #define DIFF_LINE_MAX_LENGTH (3 * MAX_CHAR_PER_LINE)
+#define MAX_INPUT_LENGTH 256
+
+void dfs_apply(void);
 struct dfs_format
 {
     char *scanf;
@@ -375,6 +378,7 @@ void edit()
 {
     _read_file();
     dfs_read();
+    dfs_apply();
 }
 
 void print()
@@ -505,12 +509,15 @@ void interpreter_loop()
 {
     // TODO: untested
     char command;
-    char *argument;
+    char argument[MAX_INPUT_LENGTH];
     int argument2 = LATEST_REVISION;
 
     while (command != 'X')
     {
-        scanf("%c %s %d", &command, argument, &argument2);
+        printf("Please enter command and argument(s).%s", DEFAULT_NEW_LINE);
+        char input[MAX_INPUT_LENGTH];
+        fgets(input, MAX_INPUT_LENGTH, stdin);
+        sscanf(input, "%c %s %d", &command, argument, &argument2);
         if (!(filename || command == 'E'))
         {
             printf("Please select a file to edit buy entering 'E filename'.");
@@ -518,7 +525,7 @@ void interpreter_loop()
         }
         //
         int statno;
-        char *statement;
+        char statement[MAX_CHAR_PER_LINE];
         switch (command)
         {
         case 'E':
@@ -529,23 +536,32 @@ void interpreter_loop()
             strcat(dif_filename, ".dif");
             version = argument2;
             edit();
+            printf("Started editing version %d of %s%s", version, filename, DEFAULT_NEW_LINE);
             break;
         case 'I':
+            puts("Insertion started.");
             // TODO: centralize 'except for line end' strings?
             scanf("%d %[^\n\r]", &statno, statement);
             insert(statno, statement);
+            puts("Insertion finished.");
             break;
         case 'D':
+            puts("Deletion started.");
             scanf("%d", &statno);
+            puts("Deletion finished.");
             break;
         case 'P':
             print();
             break;
         case 'S':
+            puts("Save started.");
             save();
+            puts("Save finished.");
             break;
         case 'C':
+            puts("Commit started.");
             commit();
+            puts("Commit finished.");
             break;
         default:
             break;
@@ -555,6 +571,11 @@ void interpreter_loop()
 
 int main(int argc, char const *argv[])
 {
+
+    // char input[MAX_INPUT_LENGTH];
+    // // scanf("%s", input);
+    // fgets(input, MAX_INPUT_LENGTH, stdin);
+    // printf("%s", input);
     // filename = "new.txt";
     // dif_filename = strdup(filename);
     // // strcpy(dif_filename, filename);

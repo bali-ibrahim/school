@@ -12,7 +12,9 @@
 
 - Can filename be global?
 
-- If a diff is saved, then it's impossible to go back to revision 0. Is there a test script that will be used?
+- If a diff is saved, then it's impossible to go back to revision 0.
+
+- Is there a test script that will be used?
 
 - Are the datatypes given in the description a requirement or recommendation?
 
