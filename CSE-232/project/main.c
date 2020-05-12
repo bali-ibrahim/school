@@ -555,25 +555,27 @@ void interpreter_loop()
 
 int main(int argc, char const *argv[])
 {
-    filename = "new.txt";
-    dif_filename = strdup(filename);
-    // strcpy(dif_filename, filename);
-    strcat(dif_filename, ".dif");
+    // filename = "new.txt";
+    // dif_filename = strdup(filename);
+    // // strcpy(dif_filename, filename);
+    // strcat(dif_filename, ".dif");
 
-    edit();
-    version = 2;
-    // commit();
     // edit();
-    // delete (1);
+    // version = 2;
+    // // commit();
+    // // edit();
+    // // delete (1);
+    // // save();
+    // // insert(2, "This is the new 2nd line.");
+    // // save();
+    // // // insert(1, "This is the new 1st line.");
+    // insert(4, "This is the new 4th line.");
+    // insert(5, "This is the new 5th line.");
     // save();
-    // insert(2, "This is the new 2nd line.");
-    // save();
-    // // insert(1, "This is the new 1st line.");
-    insert(4, "This is the new 4th line.");
-    insert(5, "This is the new 5th line.");
-    save();
-    // print();
+    // // print();
 
-    free(dif_filename);
+    // free(dif_filename);
+
+    interpreter_loop();
     return 0;
 }
