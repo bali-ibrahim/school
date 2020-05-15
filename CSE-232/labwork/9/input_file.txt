@@ -1,0 +1,7 @@
+Mark	20	Dirty
+John	55	Dirty
+George	40	Clean
+Michel	38	Clean
+Tina	55	Clean
+Pearl	45	Dirty
+Joseph	66	Dirty
