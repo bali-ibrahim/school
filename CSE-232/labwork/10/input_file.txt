@@ -1,0 +1,5 @@
+Banyan tree	India	21 m height
+Alder tree	Uk	28 m height
+Cypress tree	Mexico	42 m width
+Black pines	Japan	40 m height
+Scotch Pine	Turkey	30 m height
