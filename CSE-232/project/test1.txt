@@ -1,6 +1,0 @@
-E new.txt 2
-I
-1 This is the new first line.
-D
-3
-S

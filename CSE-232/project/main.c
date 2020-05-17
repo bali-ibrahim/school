@@ -516,6 +516,7 @@ void dfs_apply()
 void commit()
 {
     _read_file();
+    dfs_save();
     dfs_read();
     dfs_apply();
     _save_file();

@@ -1,0 +1,6 @@
+E mytext.txt
+D
+10
+I
+25 eee
+S

@@ -1,0 +1,5 @@
+E mytext.txt
+I
+22 fff
+C
+ 
