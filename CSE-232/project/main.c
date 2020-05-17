@@ -13,11 +13,15 @@
 #define DFS_OTHERWISE 0
 #define DEFAULT_DFS_SAVE_END -1
 #define DEFAULT_REVISION 0
-#define LATEST_REVISION MAX_CHANGES
+#define LATEST_REVISION -1
 #define DIFF_LINE_MAX_LENGTH (3 * MAX_CHAR_PER_LINE)
 #define MAX_INPUT_LENGTH 256
+#define SUCCESSFUL 1
+#define UNSUCCESSFUL 0
 
 void dfs_apply(void);
+void _interpret(FILE *fp, char *input);
+void _read_arguments(FILE *fp, const int *statno, const char *statement);
 struct dfs_format
 {
     char *scanf;
@@ -57,7 +61,7 @@ const struct dfs DEFAULT_DFS = {
 struct node textbuffer[MAX_LINES]; // max. 30 lines
 int head = DEFAULT_NODE_INT;       // points to the first valid statement in textbuffer[]
 struct dfs diffs[MAX_CHANGES];     // max. 20 changes
-int version = 0;                   // version number
+int version = DEFAULT_REVISION;    // version number
 char *filename;
 char *dif_filename;
 
@@ -83,7 +87,7 @@ void _diffs_flush(void)
 
 int _is_empty(int idx)
 {
-    return textbuffer[idx].statno == DEFAULT_NODE_INT;
+    return textbuffer[idx].statno == DEFAULT_NODE.statno;
 }
 
 int _first_empty_index()
@@ -99,7 +103,7 @@ int _first_empty_index()
 
 int _dfs_is_empty(int idx)
 {
-    return diffs[idx].statno == DEFAULT_NODE_INT;
+    return diffs[idx].statno == DEFAULT_NODE.statno;
 }
 
 int _dfs_first_empty_index()
@@ -145,6 +149,7 @@ void dfs_reset_version()
 
     if (fp == NULL)
     {
+        printf("dfs_reset_version %s", dif_filename);
         perror("Error while opening the file.\n");
         exit(EXIT_FAILURE);
     }
@@ -219,13 +224,14 @@ void dfs_save()
 
     if (fp == NULL)
     {
+        printf("dfs_save %s", filename);
         perror("Error while opening the file.\n");
         exit(EXIT_FAILURE);
     }
 
     fprintf(fp, "%d%s", ++version, DEFAULT_NEW_LINE);
     for (int i = 0;
-         i < MAX_CHANGES && diffs[i].statno != DEFAULT_NODE_INT;
+         i < MAX_CHANGES && diffs[i].statno != DEFAULT_NODE.statno;
          ++i)
     {
         fprintf(fp, DFS_FORMAT.printf, diffs[i].code, diffs[i].statno, diffs[i].statement);
@@ -259,7 +265,7 @@ void dfs_save()
     // possible you have to remove old file here before
     if (!rename(tmp_file, dif_filename))
     {
-        printf("Rename Error");
+        puts("Rename Error");
     }
     free(tmp_file);
 }
@@ -312,6 +318,7 @@ void _save_file()
 
     if (fp == NULL)
     {
+        printf("_save_file %s", filename);
         perror("Error while opening the file.\n");
         exit(EXIT_FAILURE);
     }
@@ -323,7 +330,7 @@ void _save_file()
     }
 
     for (int i = head;
-         i != DEFAULT_NODE_INT;
+         i != DEFAULT_NODE.next;
          i = textbuffer[i].next)
     {
         if (_is_empty(i))
@@ -331,7 +338,7 @@ void _save_file()
         fputs(textbuffer[i].statement, fp);
 
         // skip if last line
-        if (textbuffer[i].next == DEFAULT_NODE_INT)
+        if (textbuffer[i].next == DEFAULT_NODE.next)
             continue;
         // add empty lines
         for (int j = 0; j < (textbuffer[textbuffer[i].next].statno - textbuffer[i].statno - 1); ++j)
@@ -351,6 +358,7 @@ void _read_file_deprecated()
 
     if (fp == NULL)
     {
+        printf("_read_file %s", filename);
         perror("Error while opening the file.\n");
         exit(EXIT_FAILURE);
     }
@@ -432,7 +440,7 @@ void print_deprecated()
 {
     puts(filename);
     for (int i = head;
-         i != DEFAULT_NODE_INT;
+         i != DEFAULT_NODE.next;
          i = textbuffer[i].next)
     {
         if (_is_empty(i))
@@ -462,7 +470,7 @@ void save()
     dfs_save();
 }
 
-void delete (int statno)
+int delete (int statno)
 {
     int iterHead;
     iterHead = head;
@@ -492,12 +500,11 @@ void delete_deprecated(int statno)
         int new_head = textbuffer[head].next;
         textbuffer[head] = DEFAULT_NODE;
         head = new_head;
-        dfs_delete(statno);
-        return;
+        return SUCCESSFUL;
     }
 
     for (int i = head;
-         i != DEFAULT_NODE_INT;
+         i != DEFAULT_NODE.next;
          i = textbuffer[i].next)
     {
         struct node *current_line = &textbuffer[i];
@@ -507,13 +514,13 @@ void delete_deprecated(int statno)
         {
             current_line->next = next_line->next;
             *next_line = DEFAULT_NODE;
-            dfs_delete(statno);
-            return;
+            return SUCCESSFUL;
         }
     }
+    return UNSUCCESSFUL;
 }
 
-void insert(int statno, char *stat)
+int insert(int statno, char *stat)
 {
     // TODO: verify that adding newline is required or not
     // ASSUMPTION: a line is defined as characters ending with DEFAULT_NEW_LINE
@@ -523,8 +530,8 @@ void insert(int statno, char *stat)
 
     int new_index = _first_empty_index();
     // buffer is full
-    if (new_index == DEFAULT_NODE_INT)
-        return;
+    if (new_index == DEFAULT_NODE.next)
+        return UNSUCCESSFUL;
 
     // TODO: refuse statno <1 ?
 
@@ -539,147 +546,199 @@ void insert(int statno, char *stat)
 
         textbuffer[new_index].next = head;
         head = new_index;
-        dfs_insert(statno, stat);
-        return;
+        return SUCCESSFUL;
     }
 
     for (int i = head;
-         i != DEFAULT_NODE_INT;
+         i != DEFAULT_NODE.next;
          i = textbuffer[i].next)
     {
         struct node *current_line = &textbuffer[i];
         struct node *next_line = &textbuffer[current_line->next];
 
-        if (current_line->next == DEFAULT_NODE_INT || statno < next_line->statno)
+        if (current_line->next == DEFAULT_NODE.next || statno < next_line->statno)
         {
             textbuffer[new_index].next = current_line->next;
             current_line->next = new_index;
-            dfs_insert(statno, stat);
-            return;
+            return SUCCESSFUL;
         }
     }
+    return UNSUCCESSFUL;
 }
 
 void dfs_apply()
 {
-    for (int i = 0; i < MAX_CHANGES; ++i)
+    for (int i = 0; i < MAX_CHANGES && diffs[i].code != DEFAULT_DFS.code; ++i)
     {
+        int should_remove_diff = 0;
         switch (diffs[i].code)
         {
         case DFS_INSERT:
-            insert(diffs[i].statno, diffs[i].statement);
+            should_remove_diff = insert(diffs[i].statno, diffs[i].statement);
             break;
         case DFS_DELETE:
-            delete (diffs[i].statno);
+            should_remove_diff = delete (diffs[i].statno);
             break;
         default:
             break;
         }
-        diffs[i] = DEFAULT_DFS;
+        if (should_remove_diff)
+        {
+            diffs[i] = DEFAULT_DFS;
+        }
+        else
+        {
+            printf("Diff no: %d could not be applied!%s", i, DEFAULT_NEW_LINE);
+        }
     }
 }
 
 void commit()
 {
     _read_file();
+    dfs_save();
     dfs_read();
     dfs_apply();
     _save_file();
     dfs_reset_version();
 }
 
-void interpreter_loop()
+void _interpreter_loop()
 {
     // TODO: untested
     char command;
-    char argument[MAX_INPUT_LENGTH];
-    int argument2 = LATEST_REVISION;
-
     while (command != 'X')
     {
-        printf("Please enter command and argument(s).%s", DEFAULT_NEW_LINE);
+        puts("Please enter command and argument(s).");
         char input[MAX_INPUT_LENGTH];
         fgets(input, MAX_INPUT_LENGTH, stdin);
-        sscanf(input, "%c %s %d", &command, argument, &argument2);
-        if (!(filename || command == 'E'))
-        {
-            printf("Please select a file to edit buy entering 'E filename'.");
-            continue;
-        }
-        //
-        int statno;
-        char statement[MAX_CHAR_PER_LINE];
-        switch (command)
-        {
-        case 'E':
-            free(filename);
-            filename = strdup(argument);
-            free(dif_filename);
-            dif_filename = strdup(filename);
-            strcat(dif_filename, ".dif");
-            version = argument2;
-            edit();
-            printf("Started editing version %d of %s%s", version, filename, DEFAULT_NEW_LINE);
-            break;
-        case 'I':
-            puts("Insertion started.");
-            // TODO: centralize 'except for line end' strings?
-            scanf("%d %[^\n\r]", &statno, statement);
-            insert(statno, statement);
-            puts("Insertion finished.");
-            break;
-        case 'D':
-            puts("Deletion started.");
-            scanf("%d", &statno);
-            puts("Deletion finished.");
-            break;
-        case 'P':
-            print();
-            break;
-        case 'S':
-            puts("Save started.");
-            save();
-            puts("Save finished.");
-            break;
-        case 'C':
-            puts("Commit started.");
-            commit();
-            puts("Commit finished.");
-            break;
-        default:
-            break;
-        }
+        sscanf(input, "%c", &command);
+        // printf("Command in loop is %c%s", command, DEFAULT_NEW_LINE);
+        _interpret(NULL, input);
     }
+}
+
+void _interpret(FILE *fp, char *input)
+{
+    char command;
+    char argument[MAX_INPUT_LENGTH];
+    int argument2 = LATEST_REVISION;
+    sscanf(input, "%c %s %d", &command, argument, &argument2);
+
+    if (!(filename || command == 'E'))
+    {
+        printf("Please select a file to edit buy entering 'E filename {version_no}'.");
+        return;
+    }
+    int statno;
+    char statement[MAX_CHAR_PER_LINE];
+    switch (command)
+    {
+    case 'E':
+        free(filename);
+        filename = strdup(argument);
+        free(dif_filename);
+        dif_filename = strdup(filename);
+        strcat(dif_filename, ".dif");
+        if (argument2 == LATEST_REVISION)
+        {
+            argument2 = dfs_file_max_version();
+        }
+        version = argument2;
+        edit();
+        printf("Started editing version %d of %s%s", version, filename, DEFAULT_NEW_LINE);
+        break;
+    case 'I':
+        puts("Insertion started.");
+        puts("Please enter the {line_no} {statement}");
+        _read_arguments(fp, &statno, statement);
+        printf("inside _interpret %d %s\n", statno, statement);
+        if (insert(statno, statement))
+        {
+            dfs_insert(statno, statement);
+        }
+        puts("Insertion finished.");
+        break;
+    case 'D':
+        puts("Deletion started.");
+        puts("Please enter the {line_no}");
+        _read_arguments(fp, &statno, statement);
+        if (delete (statno))
+        {
+            dfs_delete(statno);
+        }
+        puts("Deletion finished.");
+        break;
+    case 'P':
+        print();
+        break;
+    case 'S':
+        puts("Save started.");
+        save();
+        puts("Save finished.");
+        break;
+    case 'C':
+        puts("Commit started.");
+        commit();
+        puts("Commit finished.");
+        break;
+    default:
+        printf("Command %c could not be intrepreted.%s", command, DEFAULT_NEW_LINE);
+        break;
+    }
+}
+
+void _test(const char *test_filename)
+{
+    FILE *fp;
+    fp = fopen(test_filename, "r"); // read mode
+
+    if (fp == NULL)
+    {
+        printf("_test %s", test_filename);
+        perror("Error while opening the file.\n");
+        exit(EXIT_FAILURE);
+    }
+
+    char line_buffer[MAX_CHAR_PER_LINE];
+    while (fgets(line_buffer, MAX_CHAR_PER_LINE, fp) != NULL)
+    {
+        _interpret(fp, line_buffer);
+    }
+    fclose(fp);
+}
+
+void _read_arguments(FILE *fp, const int *statno, const char *statement)
+{
+    char line_buffer[MAX_CHAR_PER_LINE];
+    // from a file
+    if (fp != NULL)
+    {
+        fgets(line_buffer, MAX_CHAR_PER_LINE, fp) != NULL;
+    }
+    // from stdin
+    else
+    {
+        scanf("%[^\n\r]", line_buffer);
+    }
+
+    // printf(line_buffer);
+    sscanf(line_buffer, "%d %[^\n\r]", statno, statement);
+    // printf("inside _read %d %s\n", statno, statement);
 }
 
 int main(int argc, char const *argv[])
 {
-
-    // char input[MAX_INPUT_LENGTH];
-    // // scanf("%s", input);
-    // fgets(input, MAX_INPUT_LENGTH, stdin);
-    // printf("%s", input);
-    // filename = "new.txt";
-    // dif_filename = strdup(filename);
-    // // strcpy(dif_filename, filename);
-    // strcat(dif_filename, ".dif");
-
-    // edit();
-    // version = 2;
-    // // commit();
-    // // edit();
-    // // delete (1);
-    // // save();
-    // // insert(2, "This is the new 2nd line.");
-    // // save();
-    // // // insert(1, "This is the new 1st line.");
-    // insert(4, "This is the new 4th line.");
-    // insert(5, "This is the new 5th line.");
-    // save();
-    // // print();
-
-    // free(dif_filename);
-
-    interpreter_loop();
+    // ./main.exe test1.txt
+    if (argc == 2)
+    {
+        puts("Running file input mode.");
+        _test(argv[1]);
+    }
+    else
+    {
+        puts("Running Interactive mode.");
+        _interpreter_loop();
+    }
     return 0;
 }
