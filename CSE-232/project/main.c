@@ -343,7 +343,7 @@ void _save_file()
     fclose(fp);
 }
 
-void _read_file()
+void _read_file_deprecated()
 {
     FILE *fp;
 
@@ -377,6 +377,50 @@ void _read_file()
     fclose(fp);
 }
 
+void _read_file()
+{
+    FILE *fileP;
+    fileP = fopen(filename, "r");
+
+    char c;
+    int i = 0;
+    int charIt;
+    head = 0;
+
+    if (fileP != NULL)
+    {
+        printf("Started editing version %d of %s%s", version, filename, DEFAULT_NEW_LINE);
+        initialize_textbuffer();
+        /*for (int i = 1; i <= MAX_LINES; i++) {
+            textbuffer[i - 1].statno = i;
+        }*/
+        c = fgetc(fileP);
+
+        while (c != EOF)
+        {
+            charIt = 0;
+
+            while ((c != '\n') && (c != '\r') && (c != '\n\r') && (c != '\r\n'))
+            {
+                textbuffer[i].statno = i + 1;
+                textbuffer[i].next = i + 2;
+                textbuffer[i].statement[charIt] = c;
+                charIt++;
+                c = fgetc(fileP);
+            }
+            c = fgetc(fileP);
+            i++;
+        }
+    }
+    else
+    {
+        printf("%s is not found.\n", filename);
+        exit(EXIT_FAILURE);
+    }
+    //Closing file
+    fclose(fileP);
+}
+
 void edit()
 {
     _read_file();
@@ -384,7 +428,7 @@ void edit()
     dfs_apply();
 }
 
-void print()
+void print_deprecated()
 {
     puts(filename);
     for (int i = head;
@@ -400,12 +444,48 @@ void print()
     puts("");
 }
 
+void print()
+{
+    int iterHead = head;
+    puts(filename);
+    while (textbuffer[iterHead].statno != DEFAULT_NODE_INT)
+    {
+        if (_is_empty(iterHead) || textbuffer[iterHead].statno == 0)
+            continue;
+        printf("%d  %s  \n", textbuffer[iterHead].statno, textbuffer[iterHead].statement);
+        iterHead++;
+    }
+}
+
 void save()
 {
     dfs_save();
 }
 
 void delete (int statno)
+{
+    int iterHead;
+    iterHead = head;
+
+    while ((textbuffer[iterHead].statno != statno) && textbuffer[iterHead].statno != textbuffer[MAX_LINES - 1].statno)
+    {
+
+        iterHead = iterHead + 1;
+    }
+    if (textbuffer[iterHead].statno == statno)
+    {
+        int i = textbuffer[iterHead].statno - 1;
+        for (i; i < MAX_LINES; i++)
+        {
+            for (int j = 0; j < MAX_CHAR_PER_LINE; j++)
+            {
+                textbuffer[i].statement[j] = textbuffer[i + 1].statement[j];
+            }
+        }
+    }
+}
+
+void delete_deprecated(int statno)
 {
     if (textbuffer[head].statno == statno)
     {
