@@ -350,41 +350,6 @@ void _save_file()
     fclose(fp);
 }
 
-void _read_file_deprecated()
-{
-    FILE *fp;
-
-    fp = fopen(filename, "r"); // read mode
-
-    if (fp == NULL)
-    {
-        printf("_read_file %s", filename);
-        perror("Error while opening the file.\n");
-        exit(EXIT_FAILURE);
-    }
-
-    initialize_textbuffer();
-    int line_no = 0;
-    int i = 0;
-    char line_buffer[MAX_CHAR_PER_LINE];
-    while (fgets(line_buffer, MAX_CHAR_PER_LINE, fp) != NULL)
-    {
-        ++line_no;
-        // skip empty line
-        if (!(strcmp(line_buffer, "\n") && strcmp(line_buffer, "\r") && strcmp(line_buffer, "\n\r") && strcmp(line_buffer, "\r\n")))
-            continue;
-        struct node line = DEFAULT_NODE;
-        line.statno = line_no;
-        strcpy(line.statement, line_buffer);
-        if (i > 0)
-            textbuffer[i - 1].next = i;
-        textbuffer[i] = line;
-        ++i;
-    }
-    head = 0;
-    fclose(fp);
-}
-
 void _read_file()
 {
     FILE *fileP;
@@ -472,48 +437,27 @@ void save()
 
 int delete (int statno)
 {
-    int iterHead;
-    iterHead = head;
 
-    while ((textbuffer[iterHead].statno != statno) && textbuffer[iterHead].statno != textbuffer[MAX_LINES - 1].statno)
-    {
+    int iterHead = head;
+    int tempHead;
 
-        iterHead = iterHead + 1;
-    }
-    if (textbuffer[iterHead].statno == statno)
-    {
-        int i = textbuffer[iterHead].statno - 1;
-        for (i; i < MAX_LINES; i++)
-        {
-            for (int j = 0; j < MAX_CHAR_PER_LINE; j++)
-            {
-                textbuffer[i].statement[j] = textbuffer[i + 1].statement[j];
-            }
-        }
-    }
-}
-
-void delete_deprecated(int statno)
-{
     if (textbuffer[head].statno == statno)
     {
-        int new_head = textbuffer[head].next;
+        iterHead = textbuffer[head].next;
         textbuffer[head] = DEFAULT_NODE;
-        head = new_head;
+        head = iterHead;
         return SUCCESSFUL;
     }
 
-    for (int i = head;
-         i != DEFAULT_NODE.next;
-         i = textbuffer[i].next)
+    while (textbuffer[iterHead].statno != textbuffer[MAX_LINES - 1].statno)
     {
-        struct node *current_line = &textbuffer[i];
-        struct node *next_line = &textbuffer[current_line->next];
+        tempHead = iterHead;
+        iterHead = textbuffer[iterHead].next;
 
-        if (next_line->statno == statno)
+        if (textbuffer[iterHead].statno == statno)
         {
-            current_line->next = next_line->next;
-            *next_line = DEFAULT_NODE;
+            textbuffer[tempHead].next = textbuffer[iterHead].next;
+            textbuffer[iterHead] = DEFAULT_NODE;
             return SUCCESSFUL;
         }
     }
