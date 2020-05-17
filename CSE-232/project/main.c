@@ -13,7 +13,7 @@
 #define DFS_OTHERWISE 0
 #define DEFAULT_DFS_SAVE_END -1
 #define DEFAULT_REVISION 0
-#define LATEST_REVISION MAX_CHANGES
+#define LATEST_REVISION -1
 #define DIFF_LINE_MAX_LENGTH (3 * MAX_CHAR_PER_LINE)
 #define MAX_INPUT_LENGTH 256
 #define SUCCESSFUL 1
@@ -149,6 +149,7 @@ void dfs_reset_version()
 
     if (fp == NULL)
     {
+        printf("dfs_reset_version %s", dif_filename);
         perror("Error while opening the file.\n");
         exit(EXIT_FAILURE);
     }
@@ -223,6 +224,7 @@ void dfs_save()
 
     if (fp == NULL)
     {
+        printf("dfs_save %s", filename);
         perror("Error while opening the file.\n");
         exit(EXIT_FAILURE);
     }
@@ -316,6 +318,7 @@ void _save_file()
 
     if (fp == NULL)
     {
+        printf("_save_file %s", filename);
         perror("Error while opening the file.\n");
         exit(EXIT_FAILURE);
     }
@@ -355,6 +358,7 @@ void _read_file()
 
     if (fp == NULL)
     {
+        printf("_read_file %s", filename);
         perror("Error while opening the file.\n");
         exit(EXIT_FAILURE);
     }
@@ -528,7 +532,7 @@ void _interpreter_loop()
         char input[MAX_INPUT_LENGTH];
         fgets(input, MAX_INPUT_LENGTH, stdin);
         sscanf(input, "%c", &command);
-        printf("Command in loop is %c", command);
+        // printf("Command in loop is %c%s", command, DEFAULT_NEW_LINE);
         _interpret(NULL, input);
     }
 }
@@ -555,6 +559,10 @@ void _interpret(FILE *fp, char *input)
         free(dif_filename);
         dif_filename = strdup(filename);
         strcat(dif_filename, ".dif");
+        if (argument2 == LATEST_REVISION)
+        {
+            argument2 = dfs_file_max_version();
+        }
         version = argument2;
         edit();
         printf("Started editing version %d of %s%s", version, filename, DEFAULT_NEW_LINE);
@@ -599,13 +607,14 @@ void _interpret(FILE *fp, char *input)
     }
 }
 
-void _test(char *test_filename)
+void _test(const char *test_filename)
 {
     FILE *fp;
     fp = fopen(test_filename, "r"); // read mode
 
     if (fp == NULL)
     {
+        printf("_test %s", test_filename);
         perror("Error while opening the file.\n");
         exit(EXIT_FAILURE);
     }
@@ -639,7 +648,16 @@ void _read_arguments(FILE *fp, const int *statno, const char *statement)
 
 int main(int argc, char const *argv[])
 {
-    // _interpreter_loop();
-    _test("test1.txt");
+    // ./main.exe test1.txt
+    if (argc == 2)
+    {
+        puts("Running file input mode.");
+        _test(argv[1]);
+    }
+    else
+    {
+        puts("Running Interactive mode.");
+        _interpreter_loop();
+    }
     return 0;
 }
