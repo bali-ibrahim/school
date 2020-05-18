@@ -23,7 +23,7 @@
 #define EMPTY_STR ""
 
 void dfs_apply(void);
-void _interpret(FILE *fp, char *input);
+void _interpret(FILE *fp, const char *input);
 void _read_arguments(FILE *fp, const int *statno, const char *statement);
 struct dfs_format
 {
@@ -101,7 +101,7 @@ int _first_empty_index()
             return i;
     }
 
-    return MAX_LINES;
+    return DEFAULT_NODE.next;
 }
 
 int _dfs_is_empty(int idx)
@@ -125,7 +125,7 @@ int _file_exists(char *fname)
     return (access(fname, F_OK) != -1);
 }
 
-void dfs_insert(int statno, char *stat)
+void dfs_insert(int statno, const char *stat)
 {
     struct dfs df = {
         .code = DFS_INSERT,
@@ -542,7 +542,7 @@ void _interpreter_loop()
     }
 }
 
-void _interpret(FILE *fp, char *input)
+void _interpret(FILE *fp, const char *input)
 {
     char command;
     char argument[MAX_INPUT_LENGTH];
@@ -551,7 +551,7 @@ void _interpret(FILE *fp, char *input)
 
     if (!(filename || command == 'E'))
     {
-        printf("Please select a file to edit buy entering 'E filename {version_no}'.");
+        printf("Please select a file to edit buy entering 'E {filename} {version_no}'.");
         return;
     }
     int statno;
@@ -575,7 +575,7 @@ void _interpret(FILE *fp, char *input)
         break;
     case 'I':
         puts("Insertion started.");
-        puts("Please enter the {line_no} {statement}");
+        puts("{line_no} {statement}");
         _read_arguments(fp, &statno, statement);
         printf("inside _interpret %d %s\n", statno, statement);
         if (insert(statno, statement))
@@ -630,6 +630,7 @@ void _test(const char *test_filename)
     while (fgets(line_buffer, MAX_CHAR_PER_LINE, fp) != NULL)
     {
         _interpret(fp, line_buffer);
+        memset(line_buffer, 0, MAX_CHAR_PER_LINE);
     }
     fclose(fp);
 }
