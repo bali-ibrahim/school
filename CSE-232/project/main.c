@@ -416,14 +416,12 @@ void print_deprecated()
 
 void print()
 {
-    int iterHead = head;
-    puts(filename);
-    while (textbuffer[iterHead].statno != DEFAULT_NODE_INT)
+    int i;
+    for (i = head; i != DEFAULT_NODE.next; i = textbuffer[i].next)
     {
-        if (_is_empty(iterHead) || textbuffer[iterHead].statno == 0)
-            continue;
-        printf("%d  %s  \n", textbuffer[iterHead].statno, textbuffer[iterHead].statement);
-        iterHead++;
+        printf("%d ", textbuffer[i].statno);
+        printf(textbuffer[i].statement);
+        //puts("\n");
     }
 }
 
