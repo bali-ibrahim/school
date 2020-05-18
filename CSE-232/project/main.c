@@ -355,36 +355,30 @@ void _save_file()
 
 void _read_file()
 {
+    //Opening File
     FILE *fileP;
-    fileP = fopen(filename, "r");
-
-    char c;
+    fileP = fopen(filename, READ_TEXT);
+    //Local Variables
     int i = 0;
-    int charIt;
-    head = 0;
+    int statno = 0;
+    char temp[MAX_CHAR_PER_LINE]; //To skip empty lines.
 
+    head = 0;
     if (fileP != NULL)
     {
-        printf("Started editing version %d of %s%s", version, filename, DEFAULT_NEW_LINE);
+
         initialize_textbuffer();
-        /*for (int i = 1; i <= MAX_LINES; i++) {
-            textbuffer[i - 1].statno = i;
-        }*/
-        c = fgetc(fileP);
 
-        while (c != EOF)
+        while (fgets(temp, MAX_CHAR_PER_LINE, fileP) != NULL)
         {
-            charIt = 0;
+            statno++;
+            if (!(strcmp(temp, "\n") && strcmp(temp, "\r") && strcmp(temp, "\n\r") && strcmp(temp, "\r\n")))
+                continue;
 
-            while ((c != '\n') && (c != '\r') && (c != '\n\r') && (c != '\r\n'))
-            {
-                textbuffer[i].statno = i + 1;
-                textbuffer[i].next = i + 2;
-                textbuffer[i].statement[charIt] = c;
-                charIt++;
-                c = fgetc(fileP);
-            }
-            c = fgetc(fileP);
+            textbuffer[i].statno = statno;
+            strcpy(textbuffer[i].statement, temp);
+            if (i > 0)
+                textbuffer[i - 1].next = i;
             i++;
         }
     }
