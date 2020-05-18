@@ -23,7 +23,7 @@
 #define EMPTY_STR ""
 
 void dfs_apply(void);
-void _interpret(FILE *fp, char *input);
+void _interpret(FILE *fp, const char *input);
 void _read_arguments(FILE *fp, const int *statno, const char *statement);
 struct dfs_format
 {
@@ -101,7 +101,7 @@ int _first_empty_index()
             return i;
     }
 
-    return MAX_LINES;
+    return DEFAULT_NODE.next;
 }
 
 int _dfs_is_empty(int idx)
@@ -125,7 +125,7 @@ int _file_exists(char *fname)
     return (access(fname, F_OK) != -1);
 }
 
-void dfs_insert(int statno, char *stat)
+void dfs_insert(int statno, const char *stat)
 {
     struct dfs df = {
         .code = DFS_INSERT,
@@ -355,40 +355,37 @@ void _save_file()
 
 void _read_file()
 {
-    //Opening File
-    FILE *fileP;
-    fileP = fopen(filename, READ_TEXT);
-    //Local Variables
-    int i = 0;
-    int statno = 0;
-    char temp[MAX_CHAR_PER_LINE]; //To skip empty lines.
+    FILE *fp;
 
-    head = 0;
-    if (fileP != NULL)
+    fp = fopen(filename, READ_TEXT); // read mode
+
+    if (fp == NULL)
     {
-
-        initialize_textbuffer();
-
-        while (fgets(temp, MAX_CHAR_PER_LINE, fileP) != NULL)
-        {
-            statno++;
-            if (!(strcmp(temp, "\n") && strcmp(temp, "\r") && strcmp(temp, "\n\r") && strcmp(temp, "\r\n")))
-                continue;
-
-            textbuffer[i].statno = statno;
-            strcpy(textbuffer[i].statement, temp);
-            if (i > 0)
-                textbuffer[i - 1].next = i;
-            i++;
-        }
-    }
-    else
-    {
-        printf("%s is not found.\n", filename);
+        printf("_read_file %s", filename);
+        perror("Error while opening the file.\n");
         exit(EXIT_FAILURE);
     }
-    //Closing file
-    fclose(fileP);
+
+    initialize_textbuffer();
+    int line_no = 0;
+    int i = 0;
+    char line_buffer[MAX_CHAR_PER_LINE];
+    while (fgets(line_buffer, MAX_CHAR_PER_LINE, fp) != NULL)
+    {
+        ++line_no;
+        // skip empty line
+        if (!(strcmp(line_buffer, "\n") && strcmp(line_buffer, "\r") && strcmp(line_buffer, "\n\r") && strcmp(line_buffer, "\r\n")))
+            continue;
+        struct node line = DEFAULT_NODE;
+        line.statno = line_no;
+        strcpy(line.statement, line_buffer);
+        if (i > 0)
+            textbuffer[i - 1].next = i;
+        textbuffer[i] = line;
+        ++i;
+    }
+    head = 0;
+    fclose(fp);
 }
 
 void edit()
@@ -398,7 +395,7 @@ void edit()
     dfs_apply();
 }
 
-void print_deprecated()
+void print()
 {
     puts(filename);
     for (int i = head;
@@ -414,16 +411,50 @@ void print_deprecated()
     puts(EMPTY_STR);
 }
 
-void print()
-{
-    int i;
-    for (i = head; i != DEFAULT_NODE.next; i = textbuffer[i].next)
-    {
-        printf("%d ", textbuffer[i].statno);
-        printf(textbuffer[i].statement);
-        //puts("\n");
-    }
-}
+// void save()
+// {
+
+// 	int i;
+// 	int data;
+// 	fp=fopen(file,"w");
+// 	for(i=head;i!='\0';i=textbuffer[i].next)
+// 	{
+// 		data=textbuffer[i].statno;
+// 		fprintf(fp,"%d\n",data);
+// 	}
+// 	fclose(fp);
+// }
+
+// void save2()
+// {
+// 	int i;
+// 	int data;
+// 	int neg=-1;
+// 	if(version==0)
+// 	{
+// 		fp=fopen(file,"w");
+// 		fprintf(fp,"%d\n",version);
+// 		for(i=head;i!='\0';i=diffs[i].next)
+// 		{
+// 			data=diffs[i].statno;
+// 			fprintf(fp,"%d\n",data);
+// 		}
+// 		fprintf(fp,"%d\n",neg);
+// 		fclose(fp);
+// 	}
+// 	else
+// 	{
+// 		fp=fopen(file,"a");
+// 		fprintf(fp,"%d\n",version);
+// 		for(i=head;i!='\0';i=diffs[i].next)
+// 		{
+// 			data=diffs[i].statno;
+// 			fprintf(fp,"%d\n",data);
+// 		}
+// 		fprintf(fp,"%d\n",neg);
+// 		fclose(fp);
+// 	}
+// }
 
 void save()
 {
@@ -432,123 +463,167 @@ void save()
 
 int delete (int statno)
 {
-
-    int iterHead = head;
-    int tempHead;
-
     if (textbuffer[head].statno == statno)
     {
-        iterHead = textbuffer[head].next;
+        int new_head = textbuffer[head].next;
         textbuffer[head] = DEFAULT_NODE;
-        head = iterHead;
+        head = new_head;
         return SUCCESSFUL;
     }
 
-    while (textbuffer[iterHead].statno != textbuffer[MAX_LINES - 1].statno)
+    for (int i = head;
+         i != DEFAULT_NODE.next;
+         i = textbuffer[i].next)
     {
-        tempHead = iterHead;
-        iterHead = textbuffer[iterHead].next;
+        struct node *current_line = &textbuffer[i];
+        struct node *next_line = &textbuffer[current_line->next];
 
-        if (textbuffer[iterHead].statno == statno)
+        if (next_line->statno == statno)
         {
-            textbuffer[tempHead].next = textbuffer[iterHead].next;
-            textbuffer[iterHead] = DEFAULT_NODE;
+            current_line->next = next_line->next;
+            *next_line = DEFAULT_NODE;
             return SUCCESSFUL;
         }
     }
     return UNSUCCESSFUL;
 }
 
+// int insert(int statno, char *stat)
+// {
+
+//     int i, size, count = 0;                            // Initialize size, count, i
+//     size = sizeof(textbuffer) / sizeof(textbuffer[0]); //if we dont know size of the array
+
+//     for (i = 0; i < size; i++)
+//     { // Loop to check for statement number
+//         if (textbuffer[i].statement != " ")
+//             count++;
+//     }
+
+//     /*struct node *newNode = (struct node*) malloc(sizeof(struct node));*/ //first try of impl.
+//     struct node newNode;
+
+//     newNode.statno = statno;
+//     strcpy(newNode.statement, stat); //newNode.statement = stat;
+
+//     if (count == 0)
+//     {                 // inserts a new node on the front of the list
+//         head = count; // head = 0
+//         textbuffer[head].statno = newNode.statno;
+//         strcpy(textbuffer[head].statement, newNode.statement); //textbuffer[head].statement = newNode.statement;
+//         textbuffer[head].next = 1;
+//     }
+
+//     else
+//     { //Code of inserting a node at position(state number) in the array
+
+//         for (i = 0; i < size; i++)
+//         { // Loop to check for statement number
+//             // textbuffer[i].next = i+1;  (Is it necessary?)
+
+//             if (textbuffer[i].statno == newNode.statno)
+//             {
+//                 strcpy(textbuffer[i].statement, newNode.statement); //textbuffer[i].statement = newNode.statement;
+//             }
+
+//             if ((textbuffer[i].statno < newNode.statno) && (textbuffer[i + 1].statno > newNode.statno))
+//             {
+//                 i++; //because we are going to insert the new line at index i+1 since we check if it is bigger than index i equals true
+
+//                 /*struct node *tmp = (struct node*)malloc(sizeof(struct node));*/ //-----> first try of impl.
+//                 struct node tmp;
+
+//                 /*tmp = textbuffer[i];		-----> first try of impl.
+// 				textbuffer[i]= newNode;
+// 				newNode = textbuffer[i+1];
+// 				textbuffer[i+1] = tmp;*/
+
+//                 tmp.statno = textbuffer[i].statno;              //second try of impl.
+//                 strcpy(tmp.statement, textbuffer[i].statement); //tmp.statement = textbuffer[i].statement;
+
+//                 textbuffer[i].statno = newNode.statno;
+//                 strcpy(textbuffer[i].statement, newNode.statement); //textbuffer[i].statement = newNode.statement;
+
+//                 newNode.statno = textbuffer[i + 1].statno;
+//                 strcpy(newNode.statement, textbuffer[i + 1].statement); //newNode.statement = textbuffer[i+1].statement;
+
+//                 textbuffer[i + 1].statno = tmp.statno;
+//                 strcpy(textbuffer[i + 1].statement, tmp.statement); //textbuffer[i+1].statement = tmp.statement;
+
+//                 int size_left;
+
+//                 while (size_left >= 0)
+//                 {
+//                     i = i + 2;
+//                     size_left = size - i;
+
+//                     /*tmp = textbuffer[i];	-----> first try of implementation
+// 					textbuffer[i]= newNode;
+// 					newNode = textbuffer[i+1];
+// 					textbuffer[i+1] = tmp;*/
+
+//                     tmp.statno = textbuffer[i].statno;              //second try of implementation
+//                     strcpy(tmp.statement, textbuffer[i].statement); //tmp.statement = textbuffer[i].statement;
+
+//                     textbuffer[i].statno = newNode.statno;
+//                     strcpy(textbuffer[i].statement, newNode.statement); //textbuffer[i].statement = newNode.statement;
+
+//                     newNode.statno = textbuffer[i + 1].statno;
+//                     strcpy(newNode.statement, textbuffer[i + 1].statement); //newNode.statement = textbuffer[i+1].statement;
+
+//                     textbuffer[i + 1].statno = tmp.statno;
+//                     strcpy(textbuffer[i + 1].statement, tmp.statement); //textbuffer[i+1].statement = tmp.statement;
+//                 }
+//             }
+//         }
+//     }
+//     return SUCCESSFUL;
+// }
+
 int insert(int statno, char *stat)
 {
+    // TODO: verify that adding newline is required or not
+    // ASSUMPTION: a line is defined as characters ending with DEFAULT_NEW_LINE
+    char statement[MAX_CHAR_PER_LINE];
+    strcpy(statement, stat);
+    strcat(statement, DEFAULT_NEW_LINE);
 
-    int i, size, count = 0;                            // Initialize size, count, i
-    size = sizeof(textbuffer) / sizeof(textbuffer[0]); //if we dont know size of the array
+    int new_index = _first_empty_index();
+    // buffer is full
+    if (new_index == DEFAULT_NODE.next)
+        return UNSUCCESSFUL;
 
-    for (i = 0; i < size; i++)
-    { // Loop to check for statement number
-        if (textbuffer[i].statement != " ")
-            count++;
+    // TODO: refuse statno <1 ?
+
+    // TODO: centralize node creation
+    struct node line = DEFAULT_NODE;
+    strcpy(line.statement, statement);
+    line.statno = statno;
+    textbuffer[new_index] = line;
+
+    if (statno < textbuffer[head].statno)
+    {
+
+        textbuffer[new_index].next = head;
+        head = new_index;
+        return SUCCESSFUL;
     }
 
-    /*struct node *newNode = (struct node*) malloc(sizeof(struct node));*/ //first try of impl.
-    struct node newNode;
+    for (int i = head;
+         i != DEFAULT_NODE.next;
+         i = textbuffer[i].next)
+    {
+        struct node *current_line = &textbuffer[i];
+        struct node *next_line = &textbuffer[current_line->next];
 
-    newNode.statno = statno;
-    strcpy(newNode.statement, stat); //newNode.statement = stat;
-
-    if (count == 0)
-    {                 // inserts a new node on the front of the list
-        head = count; // head = 0
-        textbuffer[head].statno = newNode.statno;
-        strcpy(textbuffer[head].statement, newNode.statement); //textbuffer[head].statement = newNode.statement;
-        textbuffer[head].next = 1;
-    }
-
-    else
-    { //Code of inserting a node at position(state number) in the array
-
-        for (i = 0; i < size; i++)
-        { // Loop to check for statement number
-            // textbuffer[i].next = i+1;  (Is it necessary?)
-
-            if (textbuffer[i].statno == newNode.statno)
-            {
-                strcpy(textbuffer[i].statement, newNode.statement); //textbuffer[i].statement = newNode.statement;
-            }
-
-            if ((textbuffer[i].statno < newNode.statno) && (textbuffer[i + 1].statno > newNode.statno))
-            {
-                i++; //because we are going to insert the new line at index i+1 since we check if it is bigger than index i equals true
-
-                /*struct node *tmp = (struct node*)malloc(sizeof(struct node));*/ //-----> first try of impl.
-                struct node tmp;
-
-                /*tmp = textbuffer[i];		-----> first try of impl.
-				textbuffer[i]= newNode;
-				newNode = textbuffer[i+1];
-				textbuffer[i+1] = tmp;*/
-
-                tmp.statno = textbuffer[i].statno;              //second try of impl.
-                strcpy(tmp.statement, textbuffer[i].statement); //tmp.statement = textbuffer[i].statement;
-
-                textbuffer[i].statno = newNode.statno;
-                strcpy(textbuffer[i].statement, newNode.statement); //textbuffer[i].statement = newNode.statement;
-
-                newNode.statno = textbuffer[i + 1].statno;
-                strcpy(newNode.statement, textbuffer[i + 1].statement); //newNode.statement = textbuffer[i+1].statement;
-
-                textbuffer[i + 1].statno = tmp.statno;
-                strcpy(textbuffer[i + 1].statement, tmp.statement); //textbuffer[i+1].statement = tmp.statement;
-
-                int size_left;
-
-                while (size_left >= 0)
-                {
-                    i = i + 2;
-                    size_left = size - i;
-
-                    /*tmp = textbuffer[i];	-----> first try of implementation
-					textbuffer[i]= newNode;
-					newNode = textbuffer[i+1];
-					textbuffer[i+1] = tmp;*/
-
-                    tmp.statno = textbuffer[i].statno;              //second try of implementation
-                    strcpy(tmp.statement, textbuffer[i].statement); //tmp.statement = textbuffer[i].statement;
-
-                    textbuffer[i].statno = newNode.statno;
-                    strcpy(textbuffer[i].statement, newNode.statement); //textbuffer[i].statement = newNode.statement;
-
-                    newNode.statno = textbuffer[i + 1].statno;
-                    strcpy(newNode.statement, textbuffer[i + 1].statement); //newNode.statement = textbuffer[i+1].statement;
-
-                    textbuffer[i + 1].statno = tmp.statno;
-                    strcpy(textbuffer[i + 1].statement, tmp.statement); //textbuffer[i+1].statement = tmp.statement;
-                }
-            }
+        if (current_line->next == DEFAULT_NODE.next || statno < next_line->statno)
+        {
+            textbuffer[new_index].next = current_line->next;
+            current_line->next = new_index;
+            return SUCCESSFUL;
         }
     }
-    return SUCCESSFUL;
+    return UNSUCCESSFUL;
 }
 
 void dfs_apply()
@@ -604,7 +679,7 @@ void _interpreter_loop()
     }
 }
 
-void _interpret(FILE *fp, char *input)
+void _interpret(FILE *fp, const char *input)
 {
     char command;
     char argument[MAX_INPUT_LENGTH];
@@ -613,7 +688,7 @@ void _interpret(FILE *fp, char *input)
 
     if (!(filename || command == 'E'))
     {
-        printf("Please select a file to edit buy entering 'E filename {version_no}'.");
+        printf("Please select a file to edit buy entering 'E {filename} {version_no}'.");
         return;
     }
     int statno;
@@ -637,7 +712,7 @@ void _interpret(FILE *fp, char *input)
         break;
     case 'I':
         puts("Insertion started.");
-        puts("Please enter the {line_no} {statement}");
+        puts("{line_no} {statement}");
         _read_arguments(fp, &statno, statement);
         printf("inside _interpret %d %s\n", statno, statement);
         if (insert(statno, statement))
@@ -692,6 +767,7 @@ void _test(const char *test_filename)
     while (fgets(line_buffer, MAX_CHAR_PER_LINE, fp) != NULL)
     {
         _interpret(fp, line_buffer);
+        memset(line_buffer, 0, MAX_CHAR_PER_LINE);
     }
     fclose(fp);
 }
