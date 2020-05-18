@@ -7,7 +7,7 @@
 #define MAX_LINES 30
 #define MAX_CHANGES 20
 #define DEFAULT_NODE_INT -1
-#define DEFAULT_NEW_LINE "\r\n"
+#define DEFAULT_NEW_LINE "\n"
 #define DFS_INSERT 1
 #define DFS_DELETE 2
 #define DFS_OTHERWISE 0
@@ -18,6 +18,9 @@
 #define MAX_INPUT_LENGTH 256
 #define SUCCESSFUL 1
 #define UNSUCCESSFUL 0
+#define READ_TEXT "r"
+#define WRITE_TEXT "w"
+#define EMPTY_STR ""
 
 void dfs_apply(void);
 void _interpret(FILE *fp, char *input);
@@ -145,7 +148,7 @@ void dfs_reset_version()
 {
     version = 0;
     FILE *fp;
-    fp = fopen(dif_filename, "w");
+    fp = fopen(dif_filename, WRITE_TEXT);
 
     if (fp == NULL)
     {
@@ -164,7 +167,7 @@ int dfs_file_max_version()
     FILE *fp;
     if (_file_exists(dif_filename))
     {
-        fp = fopen(dif_filename, "r");
+        fp = fopen(dif_filename, READ_TEXT);
         char line_buffer[DIFF_LINE_MAX_LENGTH];
         while (fgets(line_buffer, DIFF_LINE_MAX_LENGTH, fp) != NULL)
         {
@@ -219,7 +222,7 @@ void dfs_save()
     }
     else
     {
-        fp = fopen(dif_filename, "w");
+        fp = fopen(dif_filename, WRITE_TEXT);
     }
 
     if (fp == NULL)
@@ -250,8 +253,8 @@ void dfs_save()
     tmp_file = strcat(tmp_file, "~");
     FILE *t_fp;
 
-    t_fp = fopen(tmp_file, "w");
-    fp = fopen(dif_filename, "r");
+    t_fp = fopen(tmp_file, WRITE_TEXT);
+    fp = fopen(dif_filename, READ_TEXT);
 
     char line_buffer[DIFF_LINE_MAX_LENGTH];
     for (unsigned int i = 0; i <= line_no && fgets(line_buffer, DIFF_LINE_MAX_LENGTH, fp) != NULL; ++i)
@@ -275,7 +278,7 @@ void dfs_read()
 
     _diffs_flush();
     FILE *fp;
-    fp = fopen(dif_filename, "r");
+    fp = fopen(dif_filename, READ_TEXT);
 
     if (fp == NULL)
     {
@@ -314,7 +317,7 @@ void _save_file()
 {
     FILE *fp;
 
-    fp = fopen(filename, "w");
+    fp = fopen(filename, WRITE_TEXT);
 
     if (fp == NULL)
     {
@@ -414,7 +417,7 @@ void print_deprecated()
         printf("%d ", textbuffer[i].statno);
         printf(textbuffer[i].statement);
     }
-    puts("");
+    puts(EMPTY_STR);
 }
 
 void print()
@@ -532,7 +535,8 @@ void dfs_apply()
         }
         else
         {
-            printf("Diff no: %d could not be applied!%s", i, DEFAULT_NEW_LINE);
+            printf("Diff no: %d could not be applied!", i);
+            puts(EMPTY_STR);
         }
     }
 }
@@ -590,7 +594,8 @@ void _interpret(FILE *fp, char *input)
         }
         version = argument2;
         edit();
-        printf("Started editing version %d of %s%s", version, filename, DEFAULT_NEW_LINE);
+        printf("Started editing version %d of %s", version, filename);
+        puts(EMPTY_STR);
         break;
     case 'I':
         puts("Insertion started.");
@@ -627,7 +632,8 @@ void _interpret(FILE *fp, char *input)
         puts("Commit finished.");
         break;
     default:
-        printf("Command %c could not be intrepreted.%s", command, DEFAULT_NEW_LINE);
+        printf("Command %c could not be intrepreted.", command);
+        puts(EMPTY_STR);
         break;
     }
 }
@@ -635,7 +641,7 @@ void _interpret(FILE *fp, char *input)
 void _test(const char *test_filename)
 {
     FILE *fp;
-    fp = fopen(test_filename, "r"); // read mode
+    fp = fopen(test_filename, READ_TEXT); // read mode
 
     if (fp == NULL)
     {
