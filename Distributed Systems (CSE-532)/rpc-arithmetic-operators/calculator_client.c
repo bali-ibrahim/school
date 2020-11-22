@@ -245,6 +245,23 @@ int evaluate(Expr *expr)
   return ret;
 }
 
+// https://stackoverflow.com/a/13084362/7032856
+#include <string.h>
+char *deblank(char *input)
+{
+  int i, j;
+  char *output = input;
+  for (i = 0, j = 0; i < strlen(input); i++, j++)
+  {
+    if (!isspace(input[i]))
+      output[j] = input[i];
+    else
+      j--;
+  }
+  output[j] = 0;
+  return output;
+}
+
 // https://stackoverflow.com/a/16871811/7032856
 #include <string.h>
 char *readinput()
@@ -263,7 +280,7 @@ char *readinput()
     strcpy(input + inputlen, tempbuf);
     inputlen += templen;
   } while (templen == CHUNK - 1 && tempbuf[CHUNK - 2] != '\n');
-  return input;
+  return deblank(input);
 }
 
 /*
