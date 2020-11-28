@@ -4,20 +4,18 @@ import java.io.*;
 import java.net.*;
 import services.SocketConnectionService;
 
-public class Client {
+final public class Client {
 
-  public static void main(String args[]) throws Exception {
-    String sentence;
-    BufferedReader inFromUser = new BufferedReader(new InputStreamReader(System.in));
-    Socket socket = new Socket("172.22.0.3", 6789);
+  final public static void main(String args[]) throws Exception {
+    final var inFromUser = new BufferedReader(new InputStreamReader(System.in));
+    final var socket = new Socket("172.22.0.3", 6789);
 
-    var connection = new SocketConnectionService(socket);
+    final var connection = new SocketConnectionService(socket);
     connection.start();
 
     while (true) {
-      sentence = inFromUser.readLine();
+      final var sentence = inFromUser.readLine();
       connection.Send(sentence + '\n');
     }
-    // clientSocket.close();
   }
 }

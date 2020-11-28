@@ -24,7 +24,7 @@ public class SocketConnectionService extends Thread {
         var message = messageQueue.poll();
         if (message == null || message.isEmpty())
           continue;
-        DataOutputStream outToServer = new DataOutputStream(socket.getOutputStream());
+        var outToServer = new DataOutputStream(socket.getOutputStream());
         outToServer.writeBytes(message);
       }
     } catch (IOException e) {
