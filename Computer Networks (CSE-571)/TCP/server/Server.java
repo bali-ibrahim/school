@@ -1,18 +1,18 @@
-import java.net.*;
+package server;
+
+import java.net.ServerSocket;
+import java.net.Socket;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import services.SocketConnectionService;
 
-import servivces.SocketConnectionService;
-
-public class TCPServer {
+public class Server {
 
   public static void main(String args[]) throws Exception {
-
-    var welcomeSocket = new ServerSocket(8080);
+    var welcomeSocket = new ServerSocket(6789);
 
     var connectionPool = new ConcurrentLinkedQueue<SocketConnectionService>();
 
     while (true) {
-
       System.out.println("Started accepting connections!");
       Socket connectionSocket = welcomeSocket.accept();
       var connection = new SocketConnectionService(connectionSocket);

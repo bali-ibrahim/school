@@ -1,0 +1,20 @@
+version: "3.8"
+services:
+  base: &base
+    build: .
+    working_dir: /app
+    volumes:
+      - ./:/app/
+    tty: true
+    # ports:
+    #   - 8080:8080
+  server:
+    <<: *base
+    volumes: 
+      - ./TCP/server:/app/server
+      - ./TCP/services:/app/services
+  client:
+    <<: *base
+    volumes: 
+      - ./TCP/client:/app/client
+      - ./TCP/services:/app/services

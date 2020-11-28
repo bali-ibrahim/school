@@ -2,15 +2,14 @@ package client;
 
 import java.io.*;
 import java.net.*;
+import services.SocketConnectionService;
 
-import servivces.SocketConnectionService;
-
-public class TCPClient {
+public class Client {
 
   public static void main(String args[]) throws Exception {
     String sentence;
     BufferedReader inFromUser = new BufferedReader(new InputStreamReader(System.in));
-    Socket socket = new Socket("172.31.16.1", 6789);
+    Socket socket = new Socket("172.22.0.3", 6789);
 
     var connection = new SocketConnectionService(socket);
     connection.start();

@@ -11,8 +11,9 @@ public class UDPClient {
 
 		var clientSocket = new DatagramSocket();
 
-		var IPAddress = InetAddress.getByName("localhost");
-		
+		// docker inspect ${container_id} ip address
+		var IPAddress = InetAddress.getByName("172.17.0.2");
+
 		byte[] sendData = null;
 		var receiveData = new byte[100];
 
@@ -28,9 +29,8 @@ public class UDPClient {
 			clientSocket.receive(receivePacket);
 			var modifiedSentence = new String(receivePacket.getData(), 0, receivePacket.getLength());
 			System.out.println("FROM SERVER: " + modifiedSentence);
-			
+
 		}
-		
 	}
 
 }
