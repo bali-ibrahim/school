@@ -8,7 +8,7 @@ import services.NotReallyWellKnownPort;
 import services.MimeHeader;
 import services.http.HTTPService;
 
-public class ProxyDaemon {
+public class Proxy {
 
 	public static void main(String args[]) throws Exception {
 
