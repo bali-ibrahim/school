@@ -6,9 +6,15 @@ import java.util.HashMap;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
+import services.MimeHeader;
 import services.NotReallyWellKnownPort;
 
 final public class HTTPService {
+    final static public String Version = "HTTP/1.0";
+    final static public String CRLF = "\r\n";
+    final static public String forbiddenStatus = "403 Forbidden" + CRLF;
+    final static public String methodNotAllowedStatus = "405 Method Not Allowed" + CRLF;
+    final static private char SP = ' ';
 
     final public static void main(String args[]) throws Exception {
 
@@ -85,5 +91,22 @@ final public class HTTPService {
             return null;
         final var method = request.substring(0, firstSPIndex);
         return method;
+    }
+
+    final public static String toHTMLResponse(final String details, final String status) {
+        var body = "<!DOCTYPE html>" + HTTPService.CRLF;
+        body += "<body>" + HTTPService.CRLF;
+        body += "<h1>" + HTTPService.CRLF;
+        body += status;
+        body += "</h1>" + HTTPService.CRLF;
+        body += details;
+        body += "</body>" + HTTPService.CRLF;
+        body += "</html>" + HTTPService.CRLF;
+        final var statusLine = Version + SP + status;
+        final var headers = new MimeHeader("");
+        headers.put("Content-Type", "text/html; charset=UTF-8");
+        headers.put("Content-Length", "" + body.getBytes().length);
+        final var response = statusLine + headers + CRLF + body;
+        return response;
     }
 }

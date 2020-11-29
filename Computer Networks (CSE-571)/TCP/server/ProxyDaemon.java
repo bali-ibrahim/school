@@ -12,10 +12,10 @@ public class ProxyDaemon {
 
 	public static void main(String args[]) throws Exception {
 
-		ServerSocket welcomeSocket = new ServerSocket(NotReallyWellKnownPort.AlternateWebServer);
+		final var welcomeSocket = new ServerSocket(NotReallyWellKnownPort.AlternateWebServer);
 
 		while (true) {
-			Socket connectionSocket = welcomeSocket.accept();
+			final var connectionSocket = welcomeSocket.accept();
 			new Thread(new ServerHandler(connectionSocket)).start();
 		}
 
@@ -75,15 +75,21 @@ class ServerHandler implements Runnable {
 				prohibitedHostNames.add("yandex.com");
 				prohibitedHostNames.add("youtube.com");
 				if (prohibitedHostNames.contains(host)) {
-					final var response = "Connection blocked to the host due to the proxy policy.";
+					final var status = "Connection blocked to the host due to the proxy policy.";
+					System.out.println(status);
+					final var response = HTTPService.toHTMLResponse(
+							"Error when fetching URL: " + host + HTTPService.CRLF, HTTPService.forbiddenStatus);
 					outToClient.writeBytes(response);
+					dispose();
 					return;
 				}
 			}
 			{
 				final var method = HTTPService.getMethod(hd);
 				if (!method.equals("GET")) {
-					final var response = "Requested method " + method + " is not allowed on proxy server.";
+					final var status = "Requested method " + method + " is not allowed on proxy server.";
+					System.out.println(status);
+					final var response = HTTPService.toHTMLResponse("", HTTPService.methodNotAllowedStatus);
 					outToClient.writeBytes(response);
 					dispose();
 					return;
@@ -92,6 +98,8 @@ class ServerHandler implements Runnable {
 
 			System.out.println("Initiating the server connection");
 
+			// no cache
+			inMH.put("Connection", "close");
 			handleProxy(address, inMH, outToClient);
 			dispose();
 
@@ -104,7 +112,8 @@ class ServerHandler implements Runnable {
 	public void handleProxy(final String address, final MimeHeader inMH, final DataOutputStream outToClient)
 			throws Exception {
 
-		final var url = new URL("http://" + host + address);
+		// final var url = new URL("http://" + host + address);
+		final var url = new URL(address);
 		final var hostName = url.getHost();
 		final var path = url.getPath().isEmpty() ? "/" : url.getPath();
 
@@ -128,14 +137,15 @@ class ServerHandler implements Runnable {
 
 		final var meta = HTTPService.parseResponse(responseHeader);
 
-		if (meta.get("StatusCode") == "200") {
+		if (meta.get("StatusCode").equals("200")) {
 			final var eol = responseHeader.indexOf('\r');
 			final var pairs = responseHeader.substring(eol + 2);
 			final var responseMH = new MimeHeader(pairs);
 			final var length = Integer.parseInt(responseMH.get("Content-Length"));
 			final var dataArr = new byte[length];
 			inFromServer.readFully(dataArr);
-			System.out.println("Data arrived\n." + length + " bytes");
+			System.out.println("Data arrived.");
+			System.out.println(length + " bytes");
 			outToClient.write(dataArr);
 			System.out.println("Sent data back to client. Proxy for " + host + " is done.");
 		}
@@ -146,7 +156,7 @@ class ServerHandler implements Runnable {
 
 	public String getHeader(DataInputStream in) throws Exception {
 
-		byte[] header = new byte[1024];
+		final var header = new byte[1024];
 
 		int data;
 		int h = 0;

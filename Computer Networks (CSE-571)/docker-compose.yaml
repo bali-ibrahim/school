@@ -1,7 +1,8 @@
 version: "3.8"
 services:
   base: &base
-    build: .
+    build:
+      context: .
     working_dir: /app
     tty: true
   server:
