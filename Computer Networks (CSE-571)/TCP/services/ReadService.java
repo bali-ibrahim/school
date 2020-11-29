@@ -5,23 +5,19 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.Socket;
 
-
-
-public class ReadStreamService extends Thread {
+public class ReadService extends Thread {
 
   private Socket socket;
 
-  public ReadStreamService(Socket c) {
+  public ReadService(Socket c) {
     socket = c;
   }
 
   public void run() {
     try {
-      var inFromServer = new BufferedReader(
-        new InputStreamReader(socket.getInputStream())
-      );
+      final var incomingStream = (new BufferedReader(new InputStreamReader(socket.getInputStream()))).lines();
       while (true) {
-        System.out.println(inFromServer.readLine());
+        incomingStream.forEach(System.out::println);
       }
     } catch (IOException e) {
       // TODO Auto-generated catch block

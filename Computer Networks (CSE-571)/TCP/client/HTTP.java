@@ -3,6 +3,8 @@ package client;
 import java.io.*;
 import java.net.*;
 
+import services.NotReallyWellKnownPort;
+
 public class HTTP {
 
     public static void main(String args[]) throws Exception {
@@ -19,7 +21,7 @@ public class HTTP {
         String hostName = url.getHost();
         String path = url.getPath().isEmpty() ? "/" : url.getPath();
 
-        Socket clientSocket = new Socket("172.31.16.1", 8080);
+        Socket clientSocket = new Socket("172.22.0.2", NotReallyWellKnownPort.AlternateWebServer);
         connect(hostName, path, clientSocket);
         printStream(clientSocket);
 

@@ -3,18 +3,16 @@ services:
   base: &base
     build: .
     working_dir: /app
-    volumes:
-      - ./:/app/
     tty: true
-    # ports:
-    #   - 8080:8080
   server:
     <<: *base
-    volumes: 
+    volumes:
       - ./TCP/server:/app/server
       - ./TCP/services:/app/services
-  client:
+  client: &client
     <<: *base
-    volumes: 
+    volumes:
       - ./TCP/client:/app/client
       - ./TCP/services:/app/services
+
+  client2: *client

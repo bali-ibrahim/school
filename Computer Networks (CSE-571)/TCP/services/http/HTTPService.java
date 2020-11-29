@@ -2,7 +2,11 @@ package services.http;
 
 import java.io.*;
 import java.net.*;
+import java.util.HashMap;
+import java.util.regex.Pattern;
 import java.util.stream.Stream;
+
+import services.NotReallyWellKnownPort;
 
 final public class HTTPService {
 
@@ -17,7 +21,7 @@ final public class HTTPService {
         }
 
         final var url = new URL(address);
-        final var clientSocket = new Socket("172.22.0.3", 6789);
+        final var clientSocket = new Socket("172.22.0.2", NotReallyWellKnownPort.AlternateWebServer);
         final var response = get(url, clientSocket);
         response.forEach(System.out::println);
         clientSocket.close();
@@ -54,5 +58,32 @@ final public class HTTPService {
         System.out.println("HTTP request sent to: " + hostName);
         final var inStream = (new BufferedReader(new InputStreamReader(socket.getInputStream()))).lines();
         return inStream;
+    }
+
+    final public static HashMap<String, String> parseResponse(String responseMesssage) {
+        /*
+         * HTTP/1.1 404 Not Found
+         * 
+         */
+
+        final var pattern = Pattern.compile("HTTP\\/(\\S*?) (\\S*?) (.*?)(?:\\n|\\r)+", Pattern.MULTILINE);
+        final var matches = pattern.matcher(responseMesssage);
+        final var responseMeta = new HashMap<String, String>();
+        if (matches.find()) {
+            responseMeta.put("Version", matches.group(1));
+            responseMeta.put("StatusCode", matches.group(2));
+            responseMeta.put("ReasonePhrase", matches.group(3));
+        }
+
+        return responseMeta;
+    }
+
+    final public static String getMethod(String request) {
+        // https://tools.ietf.org/html/rfc2616#section-5.1
+        final var firstSPIndex = request.indexOf(' ');
+        if (firstSPIndex == -1)
+            return null;
+        final var method = request.substring(0, firstSPIndex);
+        return method;
     }
 }

@@ -18,7 +18,7 @@ public class SocketConnectionService extends Thread {
 
   public void run() {
     try {
-      var reader = new ReadStreamService(socket);
+      var reader = new ReadService(socket);
       reader.start();
       while (true) {
         var message = messageQueue.poll();
