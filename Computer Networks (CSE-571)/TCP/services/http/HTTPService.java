@@ -44,7 +44,7 @@ final public class HTTPService {
         return request;
     }
 
-    final public static Stream<String> get(final URL url) throws IOException {
+    final private static Stream<String> get(final URL url) throws IOException {
         final var hostName = url.getHost();
         final var defaultHTTPPort = 80;
         final var socket = new Socket(hostName, defaultHTTPPort);

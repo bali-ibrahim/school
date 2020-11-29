@@ -5,7 +5,7 @@ import java.net.*;
 import services.SocketConnectionService;
 import services.NotReallyWellKnownPort;
 
-final public class Client {
+final public class Chatting {
 
   final public static void main(String args[]) throws Exception {
     final var inFromUser = new BufferedReader(new InputStreamReader(System.in));
