@@ -67,6 +67,7 @@ class ServerHandler implements Runnable {
 
 			host = inMH.get("Host");
 
+			System.out.println("Requested a connection to " + host);
 			{
 				// TODO: move to somewhere modifiable from outside
 				final var prohibitedHostNames = new HashSet<String>();
@@ -74,8 +75,7 @@ class ServerHandler implements Runnable {
 				prohibitedHostNames.add("yandex.com");
 				prohibitedHostNames.add("youtube.com");
 				if (prohibitedHostNames.contains(host)) {
-					final var response = "Requested a connection to " + host + "\n"
-							+ "Connection blocked to the host due to the proxy policy.";
+					final var response = "Connection blocked to the host due to the proxy policy.";
 					outToClient.writeBytes(response);
 					return;
 				}
@@ -83,15 +83,12 @@ class ServerHandler implements Runnable {
 			{
 				final var method = HTTPService.getMethod(hd);
 				if (!method.equals("GET")) {
-					final var response = "Requested a connection to " + host + "\n" + "Requested method " + method
-							+ " is not allowed on proxy server.";
+					final var response = "Requested method " + method + " is not allowed on proxy server.";
 					outToClient.writeBytes(response);
 					dispose();
 					return;
 				}
 			}
-
-			System.out.println("Requested a connection to " + host);
 
 			System.out.println("Initiating the server connection");
 
