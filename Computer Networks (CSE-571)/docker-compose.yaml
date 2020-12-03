@@ -8,12 +8,12 @@ services:
   server:
     <<: *base
     volumes:
-      - ./TCP/server:/app/server
-      - ./TCP/services:/app/services
+      - ./TransportLayer/server:/app/server
+      - ./TransportLayer/services:/app/services
   client: &client
     <<: *base
     volumes:
-      - ./TCP/client:/app/client
-      - ./TCP/services:/app/services
+      - ./TransportLayer/client:/app/client
+      - ./TransportLayer/services:/app/services
 
   client2: *client
